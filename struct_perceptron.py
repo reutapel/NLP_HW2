@@ -24,6 +24,7 @@ class StructPerceptron:
         self.current_weight_vec_iter = 0
         self.current_weight_vec = np.empty(self.feature_vec_len)
         self.full_graph = {}
+        self.current_sentence = 0
 
     def perceptron(self, num_of_iter):
         """
@@ -33,6 +34,7 @@ class StructPerceptron:
         """
         for i in range(num_of_iter):
             for t in range(len(self.gold_tree)):
+                self.current_sentence = t
                 pred_tree = self.full_graph.get(t)
                 if pred_tree is None:
                     self.create_full_graph()
@@ -44,8 +46,8 @@ class StructPerceptron:
                     for target in targets:
                         score += self.edge_score(source, target)
                 if not self.identical_dependency_tree(pred_tree, self.gold_tree[t]):
-                    # todo: check what does it mean feature vec in terms of x,y
-                    curr_feature_vec = self.model.create_feautre_vec(self.gold_tree[t])
+                    # todo: collab with Reut on the exact functions
+                    curr_feature_vec = self.model.get_feature_vec(self.gold_tree[t])
                     new_feature_vec = self.model.create_feature_vec(pred_tree)
                     new_weight_vec = np.empty(self.feature_vec_len)  # todo: check if this is faster
                     new_weight_vec = self.current_weight_vec + curr_feature_vec - new_feature_vec
@@ -83,7 +85,8 @@ class StructPerceptron:
         :param target: a target node
         :return: score value
         """
-        pass
+        feature_vec = self.model.get_local_feature_vec(self.current_sentence, source, target)
+        return feature_vec * self.current_weight_vec
 
     def identical_dependency_tree(self, pred_tree, gold_tree):
         """
