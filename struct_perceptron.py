@@ -1,3 +1,7 @@
+import numpy as np
+
+from chu_liu import Digraph
+
 
 class StructPerceptron:
     """
@@ -14,8 +18,12 @@ class StructPerceptron:
         in a form of (x_i,y_i) where x_i is the head node and y_i the target node
         """
         self.model = model
+        self.feature_vec_len = len(model.feautre_vec_len)
         self.gold_tree = gold_tree
-        self.current_weight_vec = None
+        self.weight_matrix = []
+        self.current_weight_vec_iter = 0
+        self.current_weight_vec = np.empty(self.feature_vec_len)
+        self.full_graph = {}
 
     def perceptron(self, num_of_iter):
         """
@@ -23,15 +31,49 @@ class StructPerceptron:
         :param num_of_iter: N from the pseudo-code
         :return:
         """
-        pass
+        for i in range(num_of_iter):
+            for t in range(len(self.gold_tree)):
+                pred_tree = self.full_graph.get(t)
+                if pred_tree is None:
+                    self.create_full_graph()
+                    pred_tree = self.full_graph.get(t)
+                digraph = Digraph(pred_tree, get_score=self.edge_score)
+                mst = digraph.mst()
+                score = 0.0
+                for (source, targets) in mst.iter():
+                    for target in targets:
+                        score += self.edge_score(source, target)
+                if not self.identical_dependency_tree(pred_tree, self.gold_tree[t]):
+                    # todo: check what does it mean feature vec in terms of x,y
+                    curr_feature_vec = self.model.create_feautre_vec(self.gold_tree[t])
+                    new_feature_vec = self.model.create_feature_vec(pred_tree)
+                    new_weight_vec = np.empty(self.feature_vec_len)  # todo: check if this is faster
+                    new_weight_vec = self.current_weight_vec + curr_feature_vec - new_feature_vec
+                    self.weight_matrix.append(new_weight_vec)
+                    self.current_weight_vec_iter += 1
+                    self.current_weight_vec = new_weight_vec
+        return self.current_weight_vec
 
     def create_full_graph(self):
         """
-        this method will create for a given sentence,
-        a fully connected tree (plus root) from it
+        this method will create for a given gold dependency tree,
+        a fully connected graph from each sentence of it
         :return: a fully connected tree
         """
-        pass
+        for idx, sentence in enumerate(self.gold_tree):
+            set_of_nodes = set()
+            for source, targets in sentence:
+                set_of_nodes.add(source)
+                set_of_nodes.add(*targets)
+            if 'root' in set_of_nodes:
+                set_of_nodes.remove('root')
+            graph = {}
+            for node in set_of_nodes:
+                targets = list(set_of_nodes.difference({node}))
+                graph.update({node: targets})
+            graph.update({'root': list(set_of_nodes)})
+            self.full_graph.update({idx: graph})
+        return
 
     def edge_score(self, source, target):
         """
@@ -42,5 +84,20 @@ class StructPerceptron:
         :return: score value
         """
         pass
+
+    def identical_dependency_tree(self, pred_tree, gold_tree):
+        """
+        this method evaluate whether two dependency trees are identical
+        :param pred_tree:
+        :param gold_tree:
+        :return:
+        """
+        for gold_source, gold_tragets in gold_tree:
+            pred_source = gold_source
+            pred_targets = pred_tree[pred_source]
+            for target in gold_tragets:
+                if target not in pred_targets:
+                    return False
+        return True
 
 
