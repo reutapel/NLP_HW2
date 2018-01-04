@@ -40,11 +40,9 @@ class StructPerceptron:
                     self.create_full_graph()
                     pred_tree = self.full_graph.get(t)
                 digraph = Digraph(pred_tree, get_score=self.edge_score)
-                mst = digraph.mst()
-                score = 0.0
-                for (source, targets) in mst.iter():
-                    for target in targets:
-                        score += self.edge_score(source, target)
+                new_graph = digraph.mst()
+                pred_tree = new_graph.successors
+                assert self.check_valid_tree(pred_tree, t)
                 if not self.identical_dependency_tree(pred_tree, self.gold_tree[t]):
                     # todo: collab with Reut on the exact functions
                     curr_feature_vec = self.model.get_feature_vec(self.gold_tree[t])
@@ -86,7 +84,7 @@ class StructPerceptron:
         :return: score value
         """
         feature_vec = self.model.get_local_feature_vec(self.current_sentence, source, target)
-        return feature_vec * self.current_weight_vec
+        return self.current_weight_vec.dot(feature_vec)
 
     def identical_dependency_tree(self, pred_tree, gold_tree):
         """
@@ -104,4 +102,17 @@ class StructPerceptron:
                     return False
         return True
 
-
+    def check_valid_tree(self, pred_tree, t):
+        gold_tree = self.gold_tree[t]
+        if len(gold_tree['root']) < 1:
+            return False
+        set_of_nodes = set()
+        for source, targets in gold_tree.items():
+            set_of_nodes.add(source)
+            set_of_nodes.union(set(targets))
+        if 'root' in set_of_nodes:
+            set_of_nodes.remove('root')
+        for node in set_of_nodes:
+            if not any(node in targets for targets in pred_tree.values()):
+                return False
+        return True
