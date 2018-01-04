@@ -18,7 +18,7 @@ class StructPerceptron:
         in a form of (x_i,y_i) where x_i is the head node and y_i the target node
         """
         self.model = model
-        self.feature_vec_len = len(model.feautre_vec_len)
+        self.feature_vec_len = model.feature_vec_len
         self.gold_tree = gold_tree
         self.weight_matrix = []
         self.current_weight_vec_iter = 0
@@ -62,11 +62,11 @@ class StructPerceptron:
         a fully connected graph from each sentence of it
         :return: a fully connected tree
         """
-        for idx, sentence in enumerate(self.gold_tree):
+        for idx, sentence in enumerate(self.gold_tree.values()):
             set_of_nodes = set()
-            for source, targets in sentence:
+            for source, targets in sentence.items():
                 set_of_nodes.add(source)
-                set_of_nodes.add(*targets)
+                set_of_nodes.union(set(targets))
             if 'root' in set_of_nodes:
                 set_of_nodes.remove('root')
             graph = {}
@@ -95,11 +95,12 @@ class StructPerceptron:
         :param gold_tree:
         :return:
         """
-        for gold_source, gold_tragets in gold_tree:
+        if set(gold_tree.keys()) != set(pred_tree.keys()):
+            return False
+        for gold_source, gold_tragets in gold_tree.items():
             pred_source = gold_source
             pred_targets = pred_tree[pred_source]
-            for target in gold_tragets:
-                if target not in pred_targets:
+            if set(pred_targets) != set(gold_tragets):
                     return False
         return True
 
