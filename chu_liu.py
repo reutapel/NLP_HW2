@@ -185,11 +185,14 @@ class Digraph:
         # from the source to our new node, with an appropriate edge score.
         for source, targets in to_cycle.items():
             succs[source].append(new_id)
-            max_score = -1e100
+            max_score = None
             max_target = None
             for t in targets:
                 score = self.get_score(source, t) - self.get_score(pred[t], t)
-                if score > max_score:
+                if max_score is None:
+                    max_score = score
+                    max_target = t
+                elif score > max_score:
                     max_score = score
                     max_target = t
             old_edges[source].append(max_target)
