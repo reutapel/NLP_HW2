@@ -150,8 +150,8 @@ if __name__ == "__main__":
                 for feature_type_name, feature_type_list in feature_type_dict.items():
                     main(train_file, comp_file, 'comp', feature_type_list, num_of_iter, comp)
             run_time = (time.time() - start_time) / 60.0
-            print("{}: Finish running with lamda: {}. Run time is: {} minutes".
+            print("{}: Finish running with num_of_iter: {}. Run time is: {} minutes".
                   format(time.asctime(time.localtime(time.time())), num_of_iter, run_time))
-            logging.info('{}: Finish running with lambda:{} . Run time is: {} minutes'.
+            logging.info('{}: Finish running with num_of_iter:{} . Run time is: {} minutes'.
                          format(time.asctime(time.localtime(time.time())), num_of_iter, run_time))
 
