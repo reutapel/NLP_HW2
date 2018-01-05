@@ -94,7 +94,7 @@ def main(train_file_to_use, test_file_to_use, test_type, features_combination_li
                      format(time.asctime(time.localtime(time.time())), features_combination, num_of_iter, train_run_time))
 
         # Evaluate the results of the model
-        # TODO: chage according to the new evaluation part
+        # TODO: change according to the new evaluation part
         # write_file_name = datetime.now().strftime(directory + 'file_results/result_MEMM_basic_model_final__' + test_type +
         #                                           '%d_%m_%Y_%H_%M.wtag')
         # evaluate_class = Evaluate(parser_model_obj, weights, write_file_name, comp=comp)
