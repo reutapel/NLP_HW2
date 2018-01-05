@@ -448,9 +448,10 @@ class ParserModel:
 
 if __name__ == '__main__':
     all_start_time = time.time()
-    train_file = '/Users/reutapel/Documents/Technion/Msc/NLP/hw2/NLP_HW2/HW2-files/train.labeled'
-    test_file = '/Users/reutapel/Documents/Technion/Msc/NLP/hw2/NLP_HW2/HW2-files/test.labeled'
     curr_directory = '/Users/reutapel/Documents/Technion/Msc/NLP/hw2/NLP_HW2/'
+    train_file = curr_directory + 'HW2-files/train.labeled'
+    test_file = curr_directory + 'HW2-files/test.labeled'
+
     features = ['1', '2', '3', '4', '5', '6', '8', '10', '13']
     model_obj = ParserModel(curr_directory, train_file, test_file, features)
 
