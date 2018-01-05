@@ -43,6 +43,7 @@ class ParserModel:
         self.train_token_POS_dict = dict()
         # a dictionary where keys are the sentence index and the values are dictionaries where their keys are
         # the head node and the value ia a list of its target nodes, i.e all edges of the sentence
+        # The format: {sentence_index: {source_node: [target_nodes]}}
         self.train_gold_tree = self.create_gold_tree_dictionary('train')
 
         """create test data and gold trees dict"""
@@ -57,10 +58,12 @@ class ParserModel:
         self.test_token_POS_dict = dict()
         # a dictionary where keys are the sentence index and the values are dictionaries where their keys are
         # the head node and the value ia a list of its target nodes, i.e all edges of the sentence
+        # The format: {sentence_index: {source_node: [target_nodes]}}
         self.test_gold_tree = self.create_gold_tree_dictionary('test')
 
         self.features_combination = features_combination
 
+        """Define relevant dictionaries"""
         # dictionary for each feature type, will include the number of instances from each feature
         self.feature_1 = {}
         self.feature_2 = {}
@@ -91,6 +94,7 @@ class ParserModel:
         self.features_vector_mapping = {}
 
         # feature vectors for the gold trees
+        # The format is: {sentence_index: feature_vector}
         self.features_vector_train = defaultdict(list)
         self.features_vector_test = defaultdict(list)
 
@@ -248,8 +252,8 @@ class ParserModel:
             feature_dict = self.features_dicts[feature_number][0]
             for key, val in feature_dict.items():
                 w.writerow([key, val])
-            print('{}: finished saving feature {}'.format(time.asctime(time.localtime(time.time())), feature_number))
-            logging.info('{}: finished saving feature {}'.format(time.asctime(time.localtime(time.time())),
+            print('{}: Finished saving feature {}'.format(time.asctime(time.localtime(time.time())), feature_number))
+            logging.info('{}: Finished saving feature {}'.format(time.asctime(time.localtime(time.time())),
                                                                  feature_number))
 
     def build_features_vector(self):
@@ -273,34 +277,34 @@ class ParserModel:
                 self.features_vector_mapping[features_vector_idx] = feature_key
                 features_vector_idx += 1
                 feature_instances += 1
-            print('{}: size of feature_{} - {} instances is: {}'.format(time.asctime(time.localtime(time.time())),
+            print('{}: Size of feature_{} - {} instances is: {}'.format(time.asctime(time.localtime(time.time())),
                                                                         feature_number, feature_description,
                                                                         feature_instances))
-            logging.info('{}: size of feature_{} - {} instances is: {}'
+            logging.info('{}: Size of feature_{} - {} instances is: {}'
                          .format(time.asctime(time.localtime(time.time())), feature_number, feature_description,
                                  feature_instances))
 
-        print('{}: finished building features vector in : {}'.format(time.asctime(time.localtime(time.time())),
+        print('{}: Finished building features vector in : {}'.format(time.asctime(time.localtime(time.time())),
               time.time() - start_time))
-        logging.info('{}: finished building features vector in : {}'.format(time.asctime(time.localtime(time.time())),
+        logging.info('{}: Finished building features vector in : {}'.format(time.asctime(time.localtime(time.time())),
                      time.time() - start_time))
 
-        print('{}: saving dictionaries'.format(time.asctime(time.localtime(time.time()))))
-        print('{}: saving features_vector'.format(time.asctime(time.localtime(time.time()))))
-        logging.info('{}: saving features_vector'.format(time.asctime(time.localtime(time.time()))))
+        print('{}: Saving dictionaries'.format(time.asctime(time.localtime(time.time()))))
+        print('{}: Saving features_vector'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: Saving features_vector'.format(time.asctime(time.localtime(time.time()))))
         w = csv.writer(open(self.dict_path + 'features_vector' + '.csv', "w"))
         for key, val in self.features_vector.items():
             w.writerow([key, val])
-        print('{}: finished saving features_vector'.format(time.asctime(time.localtime(time.time()))))
-        logging.info('{}: finished saving features_vector'.format(time.asctime(time.localtime(time.time()))))
+        print('{}: Finished saving features_vector'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: Finished saving features_vector'.format(time.asctime(time.localtime(time.time()))))
 
-        print('{}: saving features_vector_mapping'.format(time.asctime(time.localtime(time.time()))))
-        logging.info('{}: saving features_vector_mapping'.format(time.asctime(time.localtime(time.time()))))
+        print('{}: Saving features_vector_mapping'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: Saving features_vector_mapping'.format(time.asctime(time.localtime(time.time()))))
         w = csv.writer(open(self.dict_path + 'features_vector_mapping' + '.csv', "w"))
         for key, val in self.features_vector_mapping.items():
             w.writerow([key, val])
         print('{}: finished saving features_vector_mapping'.format(time.asctime(time.localtime(time.time()))))
-        logging.info('{}: finished saving features_vector_mapping'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: Finished saving features_vector_mapping'.format(time.asctime(time.localtime(time.time()))))
 
         self.feature_vec_len = features_vector_idx
 
@@ -419,32 +423,37 @@ class ParserModel:
             return defaultdict(list)
 
         start_time = time.time()
-        print('{}: starting building feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
-        logging.info('{}: starting building feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
+        print('{}: Starting building feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
+        logging.info('{}: Starting building feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
 
         for sentence_index, sentence_tree in gold_tree.items():
             features_vector[sentence_index] = self.create_global_feature_vector(sentence_tree, sentence_index, data)
 
-        print('{}: finished building feature vectors {} in : {}'.
+        print('{}: Finished building feature vectors {} in : {}'.
               format(time.asctime(time.localtime(time.time())), data, time.time() - start_time))
-        logging.info('{}: finished building feature vectors {} in : {}'.
+        logging.info('{}: Finished building feature vectors {} in : {}'.
                      format(time.asctime(time.localtime(time.time())), data, time.time() - start_time))
 
-        print('{}: saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
-        logging.info('{}: saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
+        print('{}: Saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
+        logging.info('{}: Saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
         w = csv.writer(open(self.dict_path + 'features_vector_' + data + '.csv', "w"))
         for key, val in features_vector.items():
             w.writerow([key, val])
 
-        print('{}: finished saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
-        logging.info('{}: finished saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
+        print('{}: Finished saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
+        logging.info('{}: Finished saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
 
         return
 
 
 if __name__ == '__main__':
-    train_file = '/Users/reutapel/Documents/Technion/Msc/NLP/hw2/NLP_HW2/HW2-files/train_small.labeled'
+    all_start_time = time.time()
+    train_file = '/Users/reutapel/Documents/Technion/Msc/NLP/hw2/NLP_HW2/HW2-files/train.labeled'
     test_file = '/Users/reutapel/Documents/Technion/Msc/NLP/hw2/NLP_HW2/HW2-files/test.labeled'
     curr_directory = '/Users/reutapel/Documents/Technion/Msc/NLP/hw2/NLP_HW2/'
     features = ['1', '2', '3', '4', '5', '6', '8', '10', '13']
     model_obj = ParserModel(curr_directory, train_file, test_file, features)
+
+    run_time_cv = (time.time() - all_start_time) / 60.0
+    print('{}: Finished all parser model creation in : {}'.
+          format(time.asctime(time.localtime(time.time())), run_time_cv))
