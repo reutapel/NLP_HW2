@@ -38,14 +38,13 @@ def cross_validation(train_file_for_cv):
                 for sentence in test_k_fold:
                     file.write(str(sentence) + '\n')
 
+            advanced_features = range(1, 19)
+            advanced_features = [str(i) for i in advanced_features]
+            basic_features = range(1, 14)
+            basic_features = [str(i) for i in basic_features]
             feature_type_dict_cv = {
-                # 'all_features': [['feature_100', 'feature_101', 'feature_102', 'feature_103', 'feature_104',
-                #                   'feature_105', 'feature_106', 'feature_107', 'feature_108', 'feature_109',
-                #                   'feature_110', 'feature_111'],
-                #                  ['feature_100', 'feature_101', 'feature_102', 'feature_103', 'feature_104',
-                #                   'feature_105', 'feature_106', 'feature_107', 'feature_110', 'feature_111',
-                #                   'feature_108']],
-                'basic_model': [['feature_100', 'feature_103', 'feature_104']]}
+                'all_features': [advanced_features],
+                'basic_model': [basic_features]}
 
             for feature_type_name_cv, feature_type_list_cv in feature_type_dict_cv.items():
                 logging.info('{}: Start running fold number {} for lambda: {}'.
@@ -133,9 +132,13 @@ if __name__ == "__main__":
     if cv:
         cross_validation(train_file)
     else:
+        advanced_features = range(1, 19)
+        advanced_features = [str(i) for i in advanced_features]
+        basic_features = range(1, 14)
+        basic_features = [str(i) for i in basic_features]
         feature_type_dict = {
-            'all_features': [['1', '2', '3', '4', '5', '6', '8', '10', '13']],
-            'basic_model': [['1', '2', '3', '4', '5', '6', '8', '10', '13']]}
+            'all_features': [advanced_features],
+            'basic_model': [basic_features]}
 
         num_of_iter_list = [20, 50, 80, 100]
         for num_of_iter in num_of_iter_list:

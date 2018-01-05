@@ -5,6 +5,7 @@ import csv
 import os
 import numpy as np
 from collections import defaultdict
+from copy import copy
 
 
 class ParserModel:
@@ -71,10 +72,20 @@ class ParserModel:
         self.feature_4 = {}
         self.feature_5 = {}
         self.feature_6 = {}
+        self.feature_7 = {}
         self.feature_8 = {}
+        self.feature_9 = {}
         self.feature_10 = {}
+        self.feature_11 = {}
+        self.feature_12 = {}
         self.feature_13 = {}
+        self.feature_14 = {}
+        self.feature_15 = {}
+        self.feature_16 = {}
+        self.feature_17 = {}
+        self.feature_18 = {}
 
+        # a dictionary with the dictionary and the description of each feature
         self.features_dicts = {
             '1': [self.feature_1, 'p-word, p-pos'],
             '2': [self.feature_2, 'p-word'],
@@ -82,9 +93,18 @@ class ParserModel:
             '4': [self.feature_4, 'c-word, c-pos'],
             '5': [self.feature_5, 'c-word'],
             '6': [self.feature_6, 'c-pos'],
+            '7': [self.feature_7, 'p-word, p-pos, c-word, c-pos'],
             '8': [self.feature_8, 'p-pos, c-word, c-pos'],
+            '9': [self.feature_9, 'p-word, c-word, c-pos'],
             '10': [self.feature_10, 'p-word, p-pos, c-pos'],
-            '13': [self.feature_13, 'p-pos, c-pos']
+            '11': [self.feature_11, 'p-word, p-pos, c-word'],
+            '12': [self.feature_12, 'p-word, c-word'],
+            '13': [self.feature_13, 'p-pos, c-pos'],
+            '14': [self.feature_14, 'p-pos, p-pos+1, c-pos-1, c-pos'],
+            '15': [self.feature_15, 'p-pos-1, p-pos, c-pos-1, c-pos'],
+            '16': [self.feature_16, 'p-pos, p-pos+1, c-pos, c-pos+1'],
+            '17': [self.feature_17, 'p-pos-1, p-pos, c-pos, c-pos+1'],
+            '18': [self.feature_18, 'p-pos, b-pos, c-pos']
         }
 
         # the dictionary that will hold all indexes for all the instances of the features
@@ -182,10 +202,47 @@ class ParserModel:
         """
         for index, row in self.train_data.iterrows():
             # Define for features creation
-            p_word = row['head_word']
-            p_pos = row['head_POS']
-            c_word = row['token']
-            c_pos = row['token_POS']
+            p_word = copy(row['head_word'])
+            p_pos = copy(row['head_POS'])
+            c_word = copy(row['token'])
+            c_pos = copy(row['token_POS'])
+            sentence_index = copy(row['sentence_index'])
+            # find p_pos_minus_1 and p_pos_plus_1
+            parent_index = copy(row['token_head'])
+            if parent_index == 1:
+                p_pos_minus_1 = 'root'
+            elif parent_index == 0:
+                p_pos_minus_1 = 'before_root'
+            else:
+                p_pos_minus_1 = copy(self.train_token_POS_dict['token_POS'][(sentence_index, parent_index - 1)])
+
+            if (sentence_index, parent_index + 1) in self.train_token_POS_dict['token_POS'].keys():
+                p_pos_plus_1 = copy(self.train_token_POS_dict['token_POS'][(sentence_index, parent_index + 1)])
+            else:
+                p_pos_plus_1 = 'end'
+
+            # find c_pos_minus_1 and c_pos_plus_1
+            child_index = copy(row['token_counter'])
+            if child_index == 1:
+                c_pos_minus_1 = 'root'
+            elif child_index == 0:
+                p_pos_minus_1 = 'before_root'
+            else:
+                c_pos_minus_1 = copy(self.train_token_POS_dict['token_POS'][(sentence_index, child_index - 1)])
+
+            if (sentence_index, child_index + 1) in self.train_token_POS_dict['token_POS'].keys():
+                c_pos_plus_1 = copy(self.train_token_POS_dict['token_POS'][(sentence_index, child_index + 1)])
+            else:
+                c_pos_plus_1 = 'end'
+
+            # create a list of all POS between the parent and the child
+            pos_between = list()
+            if parent_index > child_index:
+                index_list = range(child_index + 1, parent_index)
+            else:
+                index_list = range(parent_index + 1, child_index)
+            for index_between in index_list:
+                pos_between.append(copy(self.train_token_POS_dict['token_POS'][(sentence_index, index_between)]))
 
             # build feature_1 of p-word, p-pos
             self.update_feature_dict('1', p_word=p_word, p_pos=p_pos)
@@ -199,12 +256,36 @@ class ParserModel:
             self.update_feature_dict('5', c_word=c_word)
             # build feature_6 of c-pos
             self.update_feature_dict('6', c_pos=c_pos)
+            # build feature_7 of p-word, p-pos, c-word, c-pos
+            self.update_feature_dict('7', p_word=p_word, p_pos=p_pos, c_word=c_word, c_pos=c_pos)
             # build feature_8 of p-pos, c-word, c-pos
             self.update_feature_dict('8', p_pos=p_pos, c_word=c_word, c_pos=c_pos)
+            # build feature_9 of p-word, c-word, c-pos
+            self.update_feature_dict('9', p_word=p_word, c_word=c_word, c_pos=c_pos)
             # build feature_10 of p-word, p-pos, c-pos
             self.update_feature_dict('10', p_word=p_word, p_pos=p_pos, c_pos=c_pos)
+            # build feature_11 of p-word, p-pos, c-word
+            self.update_feature_dict('11', p_word=p_word, p_pos=p_pos, c_word=c_word)
+            # build feature_11 of p-word, c-word
+            self.update_feature_dict('12', p_word=p_word, c_word=c_word)
             # build feature_13 of p-pos, c-pos
             self.update_feature_dict('13', p_pos=p_pos, c_pos=c_pos)
+            # build feature_14 of p-pos, p-pos+1, c-pos-1, c-pos
+            self.update_feature_dict('14', p_pos=p_pos, c_pos=c_pos, p_pos_plus_1=p_pos_plus_1,
+                                     c_pos_minus_1=c_pos_minus_1)
+            # build feature_15 of p-pos-1, p-pos, c-pos-1, c-pos
+            self.update_feature_dict('15', p_pos=p_pos, c_pos=c_pos, p_pos_minus_1=p_pos_minus_1,
+                                     c_pos_minus_1=c_pos_minus_1)
+            # build feature_16 of p-pos, p-pos+1, c-pos, c-pos+1
+            self.update_feature_dict('16', p_pos=p_pos, c_pos=c_pos, p_pos_plus_1=p_pos_plus_1,
+                                     c_pos_plus_1=c_pos_plus_1)
+            # build feature_17 of p-pos-1, p-pos, c-pos, c-pos+1
+            self.update_feature_dict('17', p_pos=p_pos, c_pos=c_pos, p_pos_minus_1=p_pos_minus_1,
+                                     c_pos_plus_1=c_pos_plus_1)
+            # build feature_18 of p-pos, b-pos, c-pos for all b-pos (POS of all words between parend and child)
+            if pos_between:
+                for b_pos in pos_between:
+                    self.update_feature_dict('18', p_pos=p_pos, c_pos=c_pos, b_pos=b_pos)
 
         # save all features dicts to csv
         for feature in self.features_dicts.keys():
@@ -212,7 +293,8 @@ class ParserModel:
 
         return
 
-    def update_feature_dict(self, feature_number, p_word=None, p_pos=None, c_word=None, c_pos=None):
+    def update_feature_dict(self, feature_number, p_word=None, p_pos=None, c_word=None, c_pos=None, p_pos_minus_1=None,
+                            p_pos_plus_1=None, c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None):
         """
         This method update the relevant feature dictionary
         :param feature_number: the number of the feature
@@ -220,11 +302,17 @@ class ParserModel:
         :param p_pos: the POS of the parent
         :param c_word: the word of the child
         :param c_pos: the POS of the child
+        :param p_pos_minus_1: POS to the left of parent in sentence
+        :param p_pos_plus_1: POS to the right of parent in sentence
+        :param c_pos_minus_1: POS to the left of child in sentence
+        :param c_pos_plus_1: POS to the right of child in sentence
+        :param b_pos: POS of a word in between parent and child nodes.
         :return: no return, just update the object's features' dictionaries
         """
 
         # Create the list of relevant feature components
-        option_for_features_list = [p_word, p_pos, c_word, c_pos]
+        option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
+                                    c_pos_minus_1, b_pos]
         option_for_features_list = [x for x in option_for_features_list if x is not None]
         if feature_number in self.features_combination:
             # get relevant feature
@@ -303,7 +391,7 @@ class ParserModel:
         w = csv.writer(open(self.dict_path + 'features_vector_mapping' + '.csv', "w"))
         for key, val in self.features_vector_mapping.items():
             w.writerow([key, val])
-        print('{}: finished saving features_vector_mapping'.format(time.asctime(time.localtime(time.time()))))
+        print('{}: Finished saving features_vector_mapping'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: Finished saving features_vector_mapping'.format(time.asctime(time.localtime(time.time()))))
 
         self.feature_vec_len = features_vector_idx
@@ -311,7 +399,8 @@ class ParserModel:
         return
 
     def calculate_local_feature_vec_per_feature(self, indexes_vector, feature_number, p_word=None, p_pos=None,
-                                                c_word=None, c_pos=None):
+                                                c_word=None, c_pos=None, p_pos_minus_1=None, p_pos_plus_1=None,
+                                                c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None):
         """
         This method create a feature vector per feature number for a given edge and a given feature number
         :param indexes_vector: the indexes_vector that we are calculating for the edge
@@ -320,9 +409,15 @@ class ParserModel:
         :param p_pos: the POS of the parent
         :param c_word: the word of the child
         :param c_pos: the POS of the child
+        :param p_pos_minus_1: POS to the left of parent in sentence
+        :param p_pos_plus_1: POS to the right of parent in sentence
+        :param c_pos_minus_1: POS to the left of child in sentence
+        :param c_pos_plus_1: POS to the right of child in sentence
+        :param b_pos: POS of a word in between parent and child nodes.
         :return: no return, the indexes_vector is updated
         """
-        option_for_features_list = [p_word, p_pos, c_word, c_pos]
+        option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
+                                    c_pos_minus_1, b_pos]
         option_for_features_list = [x for x in option_for_features_list if x is not None]
         if feature_number in self.features_combination:
             # build feature
@@ -358,29 +453,91 @@ class ParserModel:
             print('Data is not train and not test: cant create gold tree')
             return indexes_vector
 
-        p_word = data_token_pos_dict['token'][(sentence_index, source)]
-        p_pos = data_token_pos_dict['token_POS'][(sentence_index, source)]
-        c_word = data_token_pos_dict['token'][(sentence_index, target)]
-        c_pos = data_token_pos_dict['token_POS'][(sentence_index, target)]
+        p_word = copy(data_token_pos_dict['token'][(sentence_index, source)])
+        p_pos = copy(data_token_pos_dict['token_POS'][(sentence_index, source)])
+        c_word = copy(data_token_pos_dict['token'][(sentence_index, target)])
+        c_pos = copy(data_token_pos_dict['token_POS'][(sentence_index, target)])
 
-        # build feature_1 of p-word, p-pos
+        # find p_pos_minus_1 and p_pos_plus_1
+        parent_index = source
+        if parent_index == 1:
+            p_pos_minus_1 = 'root'
+        elif parent_index == 0:
+            p_pos_minus_1 = 'before_root'
+        else:
+            p_pos_minus_1 = copy(data_token_pos_dict['token_POS'][(sentence_index, parent_index - 1)])
+
+        if (sentence_index, parent_index + 1) in data_token_pos_dict['token_POS'].keys():
+            p_pos_plus_1 = copy(data_token_pos_dict['token_POS'][(sentence_index, parent_index + 1)])
+        else:
+            p_pos_plus_1 = 'end'
+
+        # find c_pos_minus_1 and c_pos_plus_1
+        child_index = target
+        if child_index == 1:
+            c_pos_minus_1 = 'root'
+        elif child_index == 0:
+            p_pos_minus_1 = 'before_root'
+        else:
+            c_pos_minus_1 = copy(data_token_pos_dict['token_POS'][(sentence_index, child_index - 1)])
+
+        if (sentence_index, child_index + 1) in data_token_pos_dict['token_POS'].keys():
+            c_pos_plus_1 = copy(data_token_pos_dict['token_POS'][(sentence_index, child_index + 1)])
+        else:
+            c_pos_plus_1 = 'end'
+
+        # create a list of all POS between the parent and the child
+        pos_between = list()
+        if parent_index > child_index:
+            index_list = range(child_index + 1, parent_index)
+        else:
+            index_list = range(parent_index + 1, child_index)
+        for index_between in index_list:
+            pos_between.append(copy(data_token_pos_dict['token_POS'][(sentence_index, index_between)]))
+
+        # calculate feature_1 of p-word, p-pos
         self.calculate_local_feature_vec_per_feature(indexes_vector, '1', p_word=p_word, p_pos=p_pos)
-        # build feature_2 of p-word
+        # calculate feature_2 of p-word
         self.calculate_local_feature_vec_per_feature(indexes_vector, '2', p_word=p_word)
-        # build feature_3 of p_pos
+        # calculate feature_3 of p_pos
         self.calculate_local_feature_vec_per_feature(indexes_vector, '3', p_pos=p_pos)
-        # build feature_4 of c-word, c-pos
+        # calculate feature_4 of c-word, c-pos
         self.calculate_local_feature_vec_per_feature(indexes_vector, '4', c_word=c_word, c_pos=c_pos)
-        # build feature_5 of c-word
+        # calculate feature_5 of c-word
         self.calculate_local_feature_vec_per_feature(indexes_vector, '5', c_word=c_word)
-        # build feature_6 of c-pos
+        # calculate feature_6 of c-pos
         self.calculate_local_feature_vec_per_feature(indexes_vector, '6', c_pos=c_pos)
-        # build feature_8 of p-pos, c-word, c-pos
+        # calculate feature_7 of p-word, p-pos, c-word, c-pos
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '7', p_word=p_word, p_pos=p_pos, c_word=c_word, c_pos=c_pos)
+        # calculate feature_8 of p-pos, c-word, c-pos
         self.calculate_local_feature_vec_per_feature(indexes_vector, '8', p_pos=p_pos, c_word=c_word, c_pos=c_pos)
-        # build feature_10 of p-word, p-pos, c-pos
+        # calculate feature_9 of p-word, c-word, c-pos
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '9', p_word=p_word, c_word=c_word, c_pos=c_pos)
+        # calculate feature_10 of p-word, p-pos, c-pos
         self.calculate_local_feature_vec_per_feature(indexes_vector, '10', p_word=p_word, p_pos=p_pos, c_pos=c_pos)
-        # build feature_13 of p-pos, c-pos
+        # calculate feature_11 of p-word, p-pos, c-word
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '11', p_word=p_word, p_pos=p_pos, c_word=c_word)
+        # calculate feature_11 of p-word, c-word
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '12', p_word=p_word, c_word=c_word)
+        # calculate feature_13 of p-pos, c-pos
         self.calculate_local_feature_vec_per_feature(indexes_vector, '13', p_pos=p_pos, c_pos=c_pos)
+        # calculate feature_14 of p-pos, p-pos+1, c-pos-1, c-pos
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '14', p_pos=p_pos, c_pos=c_pos,
+                                                     p_pos_plus_1=p_pos_plus_1, c_pos_minus_1=c_pos_minus_1)
+        # calculate feature_15 of p-pos-1, p-pos, c-pos-1, c-pos
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '15', p_pos=p_pos, c_pos=c_pos,
+                                                     p_pos_minus_1=p_pos_minus_1, c_pos_minus_1=c_pos_minus_1)
+        # calculate feature_16 of p-pos, p-pos+1, c-pos, c-pos+1
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '16', p_pos=p_pos, c_pos=c_pos,
+                                                     p_pos_plus_1=p_pos_plus_1, c_pos_plus_1=c_pos_plus_1)
+        # calculate feature_17 of p-pos-1, p-pos, c-pos, c-pos+1
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '17', p_pos=p_pos, c_pos=c_pos,
+                                                     p_pos_minus_1=p_pos_minus_1, c_pos_plus_1=c_pos_plus_1)
+        # calculate feature_18 of p-pos, b-pos, c-pos for all b-pos (POS of all words between parend and child)
+        if pos_between:
+            for b_pos in pos_between:
+                self.calculate_local_feature_vec_per_feature(indexes_vector, '18', p_pos=p_pos, c_pos=c_pos,
+                                                             b_pos=b_pos)
 
         return indexes_vector
 
@@ -452,9 +609,10 @@ if __name__ == '__main__':
     train_file = curr_directory + 'HW2-files/train.labeled'
     test_file = curr_directory + 'HW2-files/test.labeled'
 
-    features = ['1', '2', '3', '4', '5', '6', '8', '10', '13']
+    features = range(1, 19)
+    features = [str(i) for i in features]
     model_obj = ParserModel(curr_directory, train_file, test_file, features)
 
     run_time_cv = (time.time() - all_start_time) / 60.0
-    print('{}: Finished all parser model creation in : {}'.
+    print('{}: Finished all parser model creation in : {} minutes'.
           format(time.asctime(time.localtime(time.time())), run_time_cv))
