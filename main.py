@@ -6,8 +6,8 @@ from struct_perceptron import StructPerceptron
 from parser_model import ParserModel
 
 # open log connection
-directory = '/Users/reutapel/Documents/Technion/Msc/NLP/hw2/NLP_HW2/'
-LOG_FILENAME = datetime.now().strftime(directory + 'logs/LogFile_basic_model_%d_%m_%Y_%H_%M.log')
+directory = "C:\\Users\\ssheiba\\Desktop\\MASTER\\NLP\\NLP_HW2\\"
+LOG_FILENAME = datetime.now().strftime(directory + 'logs\\LogFile_basic_model_%d_%m_%Y_%H_%M.log')
 logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
 
 

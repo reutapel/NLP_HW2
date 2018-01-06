@@ -2,7 +2,7 @@ import numpy as np
 
 from chu_liu import Digraph
 
-
+# TODO - Understand when should the perceptron stop updating weights
 class StructPerceptron:
     """
     this class implements the structured perceptron, calculates the best weights
