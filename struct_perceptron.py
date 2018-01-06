@@ -10,8 +10,10 @@ class StructPerceptron:
     """
     # todo: set a score function to send to chu-liu
     # todo: implement the pseudo-code
-
-    def __init__(self, model):
+    # todo: change 'root' tag to 0
+    # todo: try and catch
+    # todo: extract to external function chu-liu uses (lines 39:46), calculate_mst()
+    def __init__(self, gold_tree, model):
         """
         :param model: an object of the model, which will create for a given edge its feature vector
         :param gold_tree: a representation of the gold dependency tree, which is represented by a list of tuples
@@ -105,7 +107,7 @@ class StructPerceptron:
 
     def check_valid_tree(self, pred_tree, t):
         gold_tree = self.gold_tree[t]
-        if len(gold_tree['root']) < 1:
+        if len(pred_tree['root']) != 1:
             return False
         set_of_nodes = set()
         for source, targets in gold_tree.items():
@@ -114,6 +116,6 @@ class StructPerceptron:
         if 'root' in set_of_nodes:
             set_of_nodes.remove('root')
         for node in set_of_nodes:
-            if not any(node in targets for targets in pred_tree.values()):
+            if sum(node in targets for targets in pred_tree.values()) != 1:
                 return False
         return True
