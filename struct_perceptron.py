@@ -21,7 +21,8 @@ class StructPerceptron:
         """
         self.model = model
         self.feature_vec_len = model.feature_vec_len
-        self.gold_tree = gold_tree
+        self.gold_tree = model.train_gold_tree
+        self.features_vector_train = model.features_vector_train
         self.weight_matrix = []
         self.current_weight_vec_iter = 0
         self.current_weight_vec = np.empty(self.feature_vec_len)
@@ -47,8 +48,8 @@ class StructPerceptron:
                 assert self.check_valid_tree(pred_tree, t)
                 if not self.identical_dependency_tree(pred_tree, self.gold_tree[t]):
                     # todo: collab with Reut on the exact functions
-                    curr_feature_vec = self.model.get_feature_vec(self.gold_tree[t])
-                    new_feature_vec = self.model.create_feature_vec(pred_tree)
+                    curr_feature_vec = self.features_vector_train[t]  # todo: Reut changed it to the correct dictionary
+                    new_feature_vec = self.model.create_global_feature_vector(pred_tree, t, 'train')
                     new_weight_vec = np.empty(self.feature_vec_len)  # todo: check if this is faster
                     new_weight_vec = self.current_weight_vec + curr_feature_vec - new_feature_vec
                     self.weight_matrix.append(new_weight_vec)
@@ -85,7 +86,7 @@ class StructPerceptron:
         :param target: a target node
         :return: score value
         """
-        feature_vec = self.model.get_local_feature_vec(self.current_sentence, source, target)
+        feature_vec = self.model.get_local_feature_vec(self.current_sentence, source, target, 'train')
         return self.current_weight_vec.dot(feature_vec)
 
     def identical_dependency_tree(self, pred_tree, gold_tree):
