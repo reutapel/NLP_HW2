@@ -6,6 +6,7 @@ import os
 import numpy as np
 from collections import defaultdict
 from copy import copy
+from scipy.sparse import csr_matrix
 
 
 class ParserModel:
@@ -14,7 +15,7 @@ class ParserModel:
     based on a given train data
     """
 
-    def __init__(self, directory, train_file_name, test_file_name, features_combination):
+    def __init__(self, directory, train_file_name, test_file_name, comp_file_name, features_combination):
         """
         :param train_file_name: the name of the train file
         :param test_file_name: the name of the test file
@@ -62,6 +63,18 @@ class ParserModel:
         # The format: {sentence_index: {source_node: [target_nodes]}}
         self.test_gold_tree = self.create_gold_tree_dictionary('test')
 
+        """create comp data and gold trees dict"""
+        self.comp_data = pd.read_table(comp_file_name, header=None, names=self.file_columns_names)
+        self.comp_data = self.comp_data.assign(sentence_index=0)
+        # will be in the format: {{token: {(sentence_index, token_counter), token)},
+        #                          token_POS: {(sentence_index, token_counter), token_POS)}
+        #                           we will use it for the head_word and head_POS assignment
+        self.comp_token_POS_dict = dict()
+        # a dictionary where keys are the sentence index and the values are dictionaries where their keys are
+        # the head node and the value ia a list of its target nodes, i.e all edges of the sentence
+        # The format: {sentence_index: {source_node: [target_nodes]}}
+        self.comp_gold_tree = self.create_gold_tree_dictionary('comp')
+
         self.features_combination = features_combination
 
         """Define relevant dictionaries"""
@@ -86,26 +99,7 @@ class ParserModel:
         self.feature_18 = {}
 
         # a dictionary with the dictionary and the description of each feature
-        self.features_dicts = {
-            '1': [self.feature_1, 'p-word, p-pos'],
-            '2': [self.feature_2, 'p-word'],
-            '3': [self.feature_3, 'p-pos'],
-            '4': [self.feature_4, 'c-word, c-pos'],
-            '5': [self.feature_5, 'c-word'],
-            '6': [self.feature_6, 'c-pos'],
-            '7': [self.feature_7, 'p-word, p-pos, c-word, c-pos'],
-            '8': [self.feature_8, 'p-pos, c-word, c-pos'],
-            '9': [self.feature_9, 'p-word, c-word, c-pos'],
-            '10': [self.feature_10, 'p-word, p-pos, c-pos'],
-            '11': [self.feature_11, 'p-word, p-pos, c-word'],
-            '12': [self.feature_12, 'p-word, c-word'],
-            '13': [self.feature_13, 'p-pos, c-pos'],
-            '14': [self.feature_14, 'p-pos, p-pos+1, c-pos-1, c-pos'],
-            '15': [self.feature_15, 'p-pos-1, p-pos, c-pos-1, c-pos'],
-            '16': [self.feature_16, 'p-pos, p-pos+1, c-pos, c-pos+1'],
-            '17': [self.feature_17, 'p-pos-1, p-pos, c-pos, c-pos+1'],
-            '18': [self.feature_18, 'p-pos, b-pos, c-pos']
-        }
+        self.features_dicts = self.define_features_dicts()
 
         # the dictionary that will hold all indexes for all the instances of the features
         self.features_vector = {}
@@ -127,23 +121,55 @@ class ParserModel:
         self.create_feature_vector('train')
         self.create_feature_vector('test')
 
-    def create_gold_tree_dictionary(self, file):
+    def define_features_dicts(self):
+        """
+        This method define the features_dict which will be a dictionary with the dictionary
+        and the description of each feature.
+        Need to change for different tasks
+        :return: features_dicts
+        """
+        features_dicts = {
+            '1': [self.feature_1, 'p-word, p-pos'],
+            '2': [self.feature_2, 'p-word'],
+            '3': [self.feature_3, 'p-pos'],
+            '4': [self.feature_4, 'c-word, c-pos'],
+            '5': [self.feature_5, 'c-word'],
+            '6': [self.feature_6, 'c-pos'],
+            '7': [self.feature_7, 'p-word, p-pos, c-word, c-pos'],
+            '8': [self.feature_8, 'p-pos, c-word, c-pos'],
+            '9': [self.feature_9, 'p-word, c-word, c-pos'],
+            '10': [self.feature_10, 'p-word, p-pos, c-pos'],
+            '11': [self.feature_11, 'p-word, p-pos, c-word'],
+            '12': [self.feature_12, 'p-word, c-word'],
+            '13': [self.feature_13, 'p-pos, c-pos'],
+            '14': [self.feature_14, 'p-pos, p-pos+1, c-pos-1, c-pos'],
+            '15': [self.feature_15, 'p-pos-1, p-pos, c-pos-1, c-pos'],
+            '16': [self.feature_16, 'p-pos, p-pos+1, c-pos, c-pos+1'],
+            '17': [self.feature_17, 'p-pos-1, p-pos, c-pos, c-pos+1'],
+            '18': [self.feature_18, 'p-pos, b-pos, c-pos']
+        }
+
+        return features_dicts
+
+    def create_gold_tree_dictionary(self, mode):
         """
         This method create a dictionary with all the gold trees of a given file.
-        :param file will be the file we want to create a dictionary based on it (train or test file)
+        :param mode will be the data we want to create a dictionary based on it (train, test of comp file)
         :return: a dictionary where keys are the sentence index and the values are dictionaries where their keys are
         the head node and the value ia a list of its target nodes, i.e all edges of the sentence
         """
 
-        print('{}: Start building gold tree from {}'.format(time.asctime(time.localtime(time.time())), file))
-        logging.info('{}: Start building gold tree from {}'.format(time.asctime(time.localtime(time.time())), file))
+        print('{}: Start building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
+        logging.info('{}: Start building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
 
-        if file == 'train':
+        if mode == 'train':
             data = self.train_data
-        elif file == 'test':
+        elif mode == 'test':
             data = self.test_data
+        elif mode == 'comp':
+            data = self.comp_data
         else:
-            print('Data is not train and not test: cant create gold tree')
+            print('Data is not train, test or comp: cant create gold tree')
             return dict()
 
         gold_tree = dict()
@@ -158,14 +184,23 @@ class ParserModel:
                     gold_tree[sentence_index] = sentence_dict
                     sentence_index += 1
                     sentence_dict = dict()
-            # add the edge: {head: target}
-            if row['token_head'] in sentence_dict.keys():
-                sentence_dict[row['token_head']].append(row['token_counter'])
-            else:
-                sentence_dict[row['token_head']] = [row['token_counter']]
 
-            # update the sentence_index in the relevant data dataframe
-            data.set_value(index, 'sentence_index', sentence_index)
+            if mode != 'comp':
+                # add the edge: {head: target}
+                if row['token_head'] in sentence_dict.keys():
+                    sentence_dict[row['token_head']].append(row['token_counter'])
+                else:
+                    sentence_dict[row['token_head']] = [row['token_counter']]
+
+                # update the sentence_index in the relevant data dataframe
+                data.set_value(index, 'sentence_index', sentence_index)
+
+            else:
+                if row['token_counter'] == 1:
+                    # if this is comp: If this is the first word in the sentence - create the list
+                    sentence_dict[0] = [row['token_counter']]
+                else:  # if this is not the first word- append it to the list
+                    sentence_dict[0].append(row['token_counter'])
         gold_tree[sentence_index] = sentence_dict
         sentence_index += 1
 
@@ -177,10 +212,16 @@ class ParserModel:
             data_token_pos_dict['token'][(root_index, 0)] = 'root'
             data_token_pos_dict['token_POS'][(root_index, 0)] = 'root'
 
-        if file == 'train':
+        if mode == 'train':
             self.train_token_POS_dict = data_token_pos_dict
-        elif file == 'test':
+        elif mode == 'test':
             self.test_token_POS_dict = data_token_pos_dict
+        elif mode == 'comp':  # if this is comp - the next lines are not relevant
+            print('{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
+            logging.info(
+                '{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
+
+            return gold_tree
 
         # add the head word and POS for each target
         for index, row in data.iterrows():
@@ -189,8 +230,8 @@ class ParserModel:
             data.set_value(index, 'head_word', data_token_pos_dict['token'][(curr_sentence_index, token_head)])
             data.set_value(index, 'head_POS', data_token_pos_dict['token_POS'][(curr_sentence_index, token_head)])
 
-        print('{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), file))
-        logging.info('{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), file))
+        print('{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
+        logging.info('{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
 
         return gold_tree
 
@@ -333,7 +374,7 @@ class ParserModel:
         """
         This method save the relevant feature dictionary
         :param feature_number: the number of the feature
-        :return:
+        :return: no return, just save the dictionary
         """
         if feature_number in self.features_combination:
             w = csv.writer(open(self.dict_path + 'feature_' + feature_number + '.csv', 'w'))
@@ -346,8 +387,8 @@ class ParserModel:
 
     def build_features_vector(self):
         """
-        This method build a feature vector with all of the features we created based on the train data
-        :return:
+        This method build a feature vector with all the features we created based on the train data
+        :return: no return, just create and save the dictionaries
         """
         start_time = time.time()
         print('{}: Start building feature vector'.format(time.asctime(time.localtime(time.time()))))
@@ -355,11 +396,11 @@ class ParserModel:
 
         features_vector_idx = 0
 
+        # for each feature type in features_combination, we create its instances' feature_key
         for feature_number in self.features_combination:
             feature_instances = 0
             feature_dict = self.features_dicts[feature_number][0]
             feature_description = self.features_dicts[feature_number][1]
-            # create first type of feature in features_vector which is word tag instances
             for feature_key in feature_dict.keys():
                 self.features_vector[feature_key] = features_vector_idx
                 self.features_vector_mapping[features_vector_idx] = feature_key
@@ -377,6 +418,7 @@ class ParserModel:
         logging.info('{}: Finished building features vector in : {}'.format(time.asctime(time.localtime(time.time())),
                      time.time() - start_time))
 
+        # Saving dictionaries to csv
         print('{}: Saving dictionaries'.format(time.asctime(time.localtime(time.time()))))
         print('{}: Saving features_vector'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: Saving features_vector'.format(time.asctime(time.localtime(time.time()))))
@@ -433,24 +475,26 @@ class ParserModel:
 
         return
 
-    def get_local_feature_vec(self, sentence_index, source, target, data):
+    def get_local_feature_vec(self, sentence_index, source, target, mode):
         """
         This method create a feature vector for a given edge
         :param sentence_index: the index of the sentence
         :param source: the token_counter of the parent
         :param target: the token_counter of the child
-        :param data: the data type: train or test
+        :param mode: the data type: train or test or comp
         :return: the vector feature of the given edge
         """
 
         indexes_vector = np.zeros(shape=self.feature_vec_len, dtype=int)
 
-        if data == 'train':
+        if mode == 'train':
             data_token_pos_dict = self.train_token_POS_dict
-        elif data == 'test':
+        elif mode == 'test':
             data_token_pos_dict = self.test_token_POS_dict
+        elif mode == 'comp':
+            data_token_pos_dict = self.comp_token_POS_dict
         else:
-            print('Data is not train and not test: cant create gold tree')
+            print('Data is not train, test or comp: cant create feature vectors')
             return indexes_vector
 
         p_word = copy(data_token_pos_dict['token'][(sentence_index, source)])
@@ -541,13 +585,13 @@ class ParserModel:
 
         return indexes_vector
 
-    def create_global_feature_vector(self, tree, sentence_index, data):
+    def create_global_feature_vector(self, tree, sentence_index, mode):
         """
         create a global feature vector for a given tree
         :param tree: a dict of that maps all the edges in the tree in the format:
         {source_node: a list of its target nodes]}. For example: {1: [2], 2: [1, 3], 3: [1]}
         :param sentence_index: the number of the sentence in the train data
-        :param data: the data type: train or test
+        :param mode: the data type: train or test
         :return:
         """
 
@@ -556,49 +600,52 @@ class ParserModel:
             source = edge[0]
             target_nodes_list = edge[1]
             for target in target_nodes_list:
-                edge_indexes_vector = self.get_local_feature_vec(sentence_index, source, target, data)
+                edge_indexes_vector = self.get_local_feature_vec(sentence_index, source, target, mode)
                 tree_indexes_vector = np.add(edge_indexes_vector, tree_indexes_vector)
 
-        return tree_indexes_vector
+        csr_tree_indexes_vector = csr_matrix(tree_indexes_vector)
+        return csr_tree_indexes_vector
 
-    def create_feature_vector(self, data):
+    def create_feature_vector(self, mode):
         """
         create feature vectors for the tree gold of each of the sentences in the train data
-        :param data: the data type: train or test
+        :param mode: the data type: train or test
         :return: no return, just save the dictionary with the feature vector for each sentence
         """
 
-        if data == 'train':
+        if mode == 'train':
             features_vector = self.features_vector_train
             gold_tree = self.train_gold_tree
 
-        elif data == 'test':
+        elif mode == 'test':
             features_vector = self.features_vector_test
             gold_tree = self.test_gold_tree
         else:
-            print('Data is not train and not test: cant create gold tree')
+            print('Data is not train and not test: cant create feature vectors for gold trees')
             return defaultdict(list)
 
         start_time = time.time()
-        print('{}: Starting building feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
-        logging.info('{}: Starting building feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
+        print('{}: Starting building feature vectors for gold trees {}'.
+              format(time.asctime(time.localtime(time.time())), mode))
+        logging.info('{}: Starting building feature vectors for gold trees {}'.
+                     format(time.asctime(time.localtime(time.time())), mode))
 
         for sentence_index, sentence_tree in gold_tree.items():
-            features_vector[sentence_index] = self.create_global_feature_vector(sentence_tree, sentence_index, data)
+            features_vector[sentence_index] = self.create_global_feature_vector(sentence_tree, sentence_index, mode)
 
-        print('{}: Finished building feature vectors {} in : {}'.
-              format(time.asctime(time.localtime(time.time())), data, time.time() - start_time))
-        logging.info('{}: Finished building feature vectors {} in : {}'.
-                     format(time.asctime(time.localtime(time.time())), data, time.time() - start_time))
+        print('{}: Finished building feature vectors for gold trees {} in : {}'.
+              format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
+        logging.info('{}: Finished building feature vectors for gold trees {} in : {}'.
+                     format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
 
-        print('{}: Saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
-        logging.info('{}: Saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
-        w = csv.writer(open(self.dict_path + 'features_vector_' + data + '.csv', "w"))
+        print('{}: Saving feature vectors for gold trees {}'.format(time.asctime(time.localtime(time.time())), mode))
+        logging.info('{}: Saving feature vectors for gold trees {}'.format(time.asctime(time.localtime(time.time())), mode))
+        w = csv.writer(open(self.dict_path + 'features_vector_' + mode + '.csv', "w"))
         for key, val in features_vector.items():
             w.writerow([key, val])
 
-        print('{}: Finished saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
-        logging.info('{}: Finished saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), data))
+        print('{}: Finished saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), mode))
+        logging.info('{}: Finished saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), mode))
 
         return
 
@@ -608,10 +655,11 @@ if __name__ == '__main__':
     curr_directory = '/Users/reutapel/Documents/Technion/Msc/NLP/hw2/NLP_HW2/'
     train_file = curr_directory + 'HW2-files/train.labeled'
     test_file = curr_directory + 'HW2-files/test.labeled'
+    comp_file = curr_directory + 'HW2-files/comp.unlabeled'
 
     features = range(1, 19)
     features = [str(i) for i in features]
-    model_obj = ParserModel(curr_directory, train_file, test_file, features)
+    model_obj = ParserModel(curr_directory, train_file, test_file, comp_file, features)
 
     run_time_cv = (time.time() - all_start_time) / 60.0
     print('{}: Finished all parser model creation in : {} minutes'.
