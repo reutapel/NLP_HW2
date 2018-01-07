@@ -95,10 +95,16 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
                      format(time.asctime(time.localtime(time.time())), features_combination, num_of_iter, train_run_time))
 
         # Evaluate the results of the model
-        # TODO: change according to the new evaluation part
-        # write_file_name = datetime.now().strftime(directory + 'file_results/result_MEMM_basic_model_final__' + test_type +
+        # write_file_name = datetime.now().strftime(directory + 'evaluations/result_MEMM_basic_model_final__' + test_type +
         #                                           '%d_%m_%Y_%H_%M.wtag')
         evaluate_obj = Evaluate(parser_model_obj, perceptron_obj, directory)
+        accuracy, mistakes_dict_name = evaluate_obj.calculate_accuracy(test_type)
+
+
+        logging.info('{}: The model hyper parameters: \n num_of_iter: {} \n test file: {} \n train file: {} '
+                     '\n test type: {} \n features combination list: {} \n accuracy: {} \n mistakes dict name: {}'
+                     .format(time.asctime(time.localtime(time.time())), num_of_iter, test_file_to_use,
+                             train_file_to_use, test_type, features_combination_list, accuracy, mistakes_dict_name))
 
         # if not comp:
         #     word_results_dictionary = evaluate_class.run()
@@ -127,11 +133,11 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
-    train_file = directory + 'HW2-files/train.labeled'
-    test_file = directory + 'HW2-files/test.labeled'
+    train_file = directory + 'HW2-files/train_small.labeled'
+    test_file = directory + 'HW2-files/test_small.labeled'
     comp_file = directory + 'HW2-files/comp.unlabeled'
     cv = False
-    comp = True
+    comp = False
     if cv:
         cross_validation(train_file)
     else:
@@ -143,7 +149,7 @@ if __name__ == "__main__":
             'all_features': [advanced_features],
             'basic_model': [basic_features]}
 
-        num_of_iter_list = [20, 50, 80, 100]
+        num_of_iter_list = [20]#, 50, 80, 100]
         for num_of_iter in num_of_iter_list:
             start_time = time.time()
             if not comp:
