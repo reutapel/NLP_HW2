@@ -88,9 +88,9 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
         weights = perceptron_obj.perceptron(num_of_iter=num_of_iter)
 
         train_run_time = (time.time() - train_start_time) / 60.0
-        print('{}: Finish gradient for features : {} and lambda: {}. run time: {}'.
+        print('{}: Finish Perceptron for features : {} and lambda: {}. run time: {}'.
               format(time.asctime(time.localtime(time.time())), features_combination, num_of_iter, train_run_time))
-        logging.info('{}: Finish gradient for features : {} and lambda: {}. run time: {}'.
+        logging.info('{}: Finish Perceptron for features : {} and lambda: {}. run time: {}'.
                      format(time.asctime(time.localtime(time.time())), features_combination, num_of_iter, train_run_time))
 
         # Evaluate the results of the model
