@@ -61,7 +61,7 @@ def cross_validation(train_file_for_cv):
             k += 1
 
 
-def main(train_file_to_use, test_file_to_use, test_type, features_combination_list, num_of_iter, comp):
+def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, features_combination_list, num_of_iter, comp):
 
     # start all combination of features
     for features_combination in features_combination_list:
@@ -71,7 +71,8 @@ def main(train_file_to_use, test_file_to_use, test_type, features_combination_li
         logging.info('{}: Start creating parser model for features : {}'.format(time.asctime(time.localtime(time.time())),
                                                                                 features_combination))
         train_start_time = time.time()
-        parser_model_obj = ParserModel(directory, train_file_to_use, test_file_to_use, features_combination)
+        parser_model_obj = ParserModel(directory, train_file_to_use, test_file_to_use, comp_file_to_use,
+                                       features_combination)
 
         print('{}: Finish creating parser model for features : {}'.format(time.asctime(time.localtime(time.time())),
                                                                           features_combination))
@@ -145,10 +146,10 @@ if __name__ == "__main__":
             start_time = time.time()
             if not comp:
                 for feature_type_name, feature_type_list in feature_type_dict.items():
-                    main(train_file, comp_file, 'test', feature_type_list, num_of_iter, comp)
+                    main(train_file, test_file, comp_file, 'test', feature_type_list, num_of_iter, comp)
             else:
                 for feature_type_name, feature_type_list in feature_type_dict.items():
-                    main(train_file, comp_file, 'comp', feature_type_list, num_of_iter, comp)
+                    main(train_file, test_file, comp_file, 'comp', feature_type_list, num_of_iter, comp)
             run_time = (time.time() - start_time) / 60.0
             print("{}: Finish running with num_of_iter: {}. Run time is: {} minutes".
                   format(time.asctime(time.localtime(time.time())), num_of_iter, run_time))
