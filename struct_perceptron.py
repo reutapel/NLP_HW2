@@ -15,10 +15,10 @@ class StructPerceptron:
         :type model: parser_model.ParserModel
         """
         self.model = model
+        # number of features
         self.feature_vec_len = model.feature_vec_len
         self.train_gold_tree = model.train_gold_tree
         self.test_gold_tree = model.test_gold_tree
-        # todo: make sure this implemented in Reut's code
         self.comp_gold_tree = model.comp_gold_tree
         # the feature vector of a complete sentence in the training
         self.features_vector_train = model.features_vector_train
@@ -79,7 +79,7 @@ class StructPerceptron:
                 else:
                     if not self.identical_dependency_tree(pred_tree, self.gold_tree[t]):
                         curr_feature_vec = self.features_vector_train[t]
-                        new_feature_vec = self.model.create_global_feature_vector(pred_tree, t, data=self._mode)
+                        new_feature_vec = self.model.create_global_feature_vector(pred_tree, t, mode=self._mode)
                         new_weight_vec = np.zeros(shape=self.feature_vec_len)
                         new_weight_vec = self.current_weight_vec + curr_feature_vec - new_feature_vec
                         self.weight_matrix.append(new_weight_vec)
@@ -136,7 +136,7 @@ class StructPerceptron:
         :param target: a target node
         :return: score value
         """
-        feature_vec = self.model.get_local_feature_vec(self.current_sentence, source, target, data=self._mode)
+        feature_vec = self.model.get_local_feature_vec(self.current_sentence, source, target, mode=self._mode)
         return self.current_weight_vec.dot(feature_vec)
 
     def identical_dependency_tree(self, pred_tree, gold_tree):
