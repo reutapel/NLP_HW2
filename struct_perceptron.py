@@ -2,15 +2,14 @@ import numpy as np
 
 from chu_liu import Digraph
 
+
 # TODO - Understand when should the perceptron stop updating weights
 class StructPerceptron:
     """
     this class implements the structured perceptron, calculates the best weights
     using Chu-Liu-Edmonds algorithm to find the Maximum Spanning Tree
     """
-    # todo: set of nodes need to be set one time only (at full graph creation)
-    # todo: create the full graph on creation (with default of 'train')
-    def __init__(self, model):
+    def __init__(self, model, mode='train'):
         """
         :param model: an object of the model, which will create for a given edge its feature vector
         :type model: parser_model.ParserModel
@@ -26,11 +25,14 @@ class StructPerceptron:
         self.weight_matrix = []
         self.current_weight_vec_iter = 0
         self.current_weight_vec = np.zeros(shape=self.feature_vec_len)
-        self.full_graph = {}
         self.current_sentence = 0
-        # mode of the Class
-        self._mode = 'train'
-        self.gold_tree = self.train_gold_tree
+        # full graph contains a full graph + root per sentence {sentence_id: {parent_node: [child_nods]}}
+        self.full_graph = {}
+        self.sets_of_nodes = {}  # dict that contains set of nodes per sentence: {sentence_id: set_of_nodes}
+        # mode of the class
+        self._mode = mode
+        self.gold_tree = None
+        self.inference_mode(mode)
         # constant which represent the 'root' node in the data
         self._ROOT = 0
 
@@ -40,10 +42,11 @@ class StructPerceptron:
         this method sets the gold tree source and the mode of using the model functions,
         and than creates a new full_graph dictionary out of the relevant gold tree
 
-        :param str mode: indicates class mode:
-         * train mode ('train')
-         * test mode ('test')
-         * competition mode ('comp')
+        :param str mode:
+        indicates class mode:
+          * train mode ('train')
+          * test mode ('test')
+          * competition mode ('comp')
         :return: None
         """
         if mode == 'train':
@@ -52,7 +55,7 @@ class StructPerceptron:
         elif mode == 'test':
             self._mode = mode
             self.gold_tree = self.test_gold_tree
-        else:
+        else:  # mode == 'comp'
             self._mode = mode
             self.gold_tree = self.comp_gold_tree
         self.create_full_graph()
@@ -63,6 +66,7 @@ class StructPerceptron:
 
         :param num_of_iter: N from the pseudo-code
         :return: the final weight vector
+        :rtype: np.ndarray
         """
         for i in range(num_of_iter):
             for t in range(len(self.gold_tree)):
@@ -85,15 +89,15 @@ class StructPerceptron:
 
     def calculate_mst(self, t):
         """
+        this method calculates the Max Spanning Tree using the chu-liu implementation,
+        using a full graph of the sentence.
 
         :param int t: the index of the sentence
-        :return:
+        :return: A predicted tree from the algorithm
+        :rtype: dict[int, List[int]]
         :raise AssertionError: with argument of the defected predicated tree
         """
         pred_tree = self.full_graph.get(t)
-        if pred_tree is None:
-            self.create_full_graph()
-            pred_tree = self.full_graph.get(t)
         digraph = Digraph(pred_tree, get_score=self.edge_score)
         new_graph = digraph.mst()
         pred_tree = new_graph.successors
@@ -114,6 +118,7 @@ class StructPerceptron:
                 set_of_nodes.union(set(targets))
             if self._ROOT in set_of_nodes:
                 set_of_nodes.remove(self._ROOT)
+            self.sets_of_nodes.update({idx: set_of_nodes})
             graph = {}
             for node in set_of_nodes:
                 targets = list(set_of_nodes.difference({node}))
@@ -138,36 +143,32 @@ class StructPerceptron:
         """
         this method evaluate whether two dependency trees are identical
 
-        :param pred_tree:
-        :param gold_tree:
+        :param pred_tree: the predicted tree from the algorithm
+        :param gold_tree: the gold labeled tree (graph with the correct edges)
         :return:
         """
         if set(gold_tree.keys()) != set(pred_tree.keys()):
             return False
-        for gold_source, gold_tragets in gold_tree.items():
+        for gold_source, gold_targets in gold_tree.items():
             pred_source = gold_source
             pred_targets = pred_tree[pred_source]
-            if set(pred_targets) != set(gold_tragets):
+            if set(pred_targets) != set(gold_targets):
                     return False
         return True
 
     def check_valid_tree(self, pred_tree, t):
         """
         check weather the tree returned from the Chu-Liu-Edmonds algorithm is a valid tree
+        Valid tree means that each node have exactly one incoming edge, and the root is connected
 
-        :param pred_tree:
-        :param t:
-        :return:
+        :param pred_tree: the predicted tree from the algorithm
+        :param t: the sentence index
+        :return: True if the tree is valid
+        :rtype: bool
         """
-        gold_tree = self.gold_tree[t]
         if len(pred_tree[self._ROOT]) != 1:
             return False
-        set_of_nodes = set()
-        for source, targets in gold_tree.items():
-            set_of_nodes.add(source)
-            set_of_nodes.union(set(targets))
-        if self._ROOT in set_of_nodes:
-            set_of_nodes.remove(self._ROOT)
+        set_of_nodes = self.sets_of_nodes[t]
         for node in set_of_nodes:
             if sum(node in targets for targets in pred_tree.values()) != 1:
                 return False
