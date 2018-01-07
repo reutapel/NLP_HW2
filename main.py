@@ -100,8 +100,11 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
         evaluate_obj = Evaluate(parser_model_obj, perceptron_obj, directory)
         accuracy, mistakes_dict_name = evaluate_obj.calculate_accuracy(test_type)
 
-
-        logging.info('{}: The model hyper parameters: \n num_of_iter: {} \n test file: {} \n train file: {} '
+        print('{}: The model hyper parameters and results are: \n num_of_iter: {} \n test file: {} \n train file: {} '
+                     '\n test type: {} \n features combination list: {} \n accuracy: {} \n mistakes dict name: {}'
+                     .format(time.asctime(time.localtime(time.time())), num_of_iter, test_file_to_use,
+                             train_file_to_use, test_type, features_combination_list, accuracy, mistakes_dict_name))
+        logging.info('{}: The model hyper parameters and results are: \n num_of_iter: {} \n test file: {} \n train file: {} '
                      '\n test type: {} \n features combination list: {} \n accuracy: {} \n mistakes dict name: {}'
                      .format(time.asctime(time.localtime(time.time())), num_of_iter, test_file_to_use,
                              train_file_to_use, test_type, features_combination_list, accuracy, mistakes_dict_name))
