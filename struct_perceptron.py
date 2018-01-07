@@ -34,7 +34,7 @@ class StructPerceptron:
         self.gold_tree = None
         self.inference_mode(mode)
         # constant which represent the 'root' node in the data
-        self._ROOT = int(0)
+        self._ROOT = 0
 
     def inference_mode(self, mode='train'):
         """
