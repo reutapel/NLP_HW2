@@ -3,69 +3,144 @@ import itertools
 from datetime import datetime
 import xlwt
 from collections import defaultdict
+import logging
+import time
+import os
 
 
 class Evaluate:
 
     """
-    this class evaluates the results on test, and creates the predicted file for the competition.
+    this class evaluates the results by calculating accuracy, and creates the predicted file for the competition.
     also makes analysis of test results.
     """
 
-    def __init__(self, model, inference_obj, weights,train=False, comp_file_name=None):
+    def __init__(self, model, inference_obj, directory):
 
         """
         :param model: Dependency tree model object
         :param inference_obj: perceptron obj that calls the CLE inference class
-        :param weights: the final features weights learned by the perceptron, for the competition inference stage
-        :param comp_file_name: if evaluation class is for inference on competition data
         """
+        print('building class Evaluate instance')
+        logging.info('building class Evaluate instance')
 
         self.model = model
         self.inference_obj = inference_obj
-        if train:
-            self.gold_tree = model.train_gold_tree
-            self.token_POS_dict = model.train_token_POS_dict
+        self.gold_tree = None
+        self.token_POS_dict = None
+        self.inference_mode = None
+        self.directory = os.path.join(directory + 'evaluations\\')
+
+    def update_inference_mode(self, inference_mode):
+
+        """
+        :param inference_mode: for updates the class variables to the correct work mode
+        :return:
+        """
+
+        self.inference_mode = inference_mode
+        if self.inference_mode == 'train':
+            self.gold_tree = self.model.train_gold_tree
+            self.token_POS_dict = self.model.train_token_POS_dict
+            print('Evaluation updated to train mode')
+            logging.info('Evaluation updated to train mode')
+        elif self.inference_mode == 'test':
+            self.gold_tree = self.model.test_gold_tree
+            self.token_POS_dict = self.model.test_token_POS_dict
+            print('Evaluation updated to test mode')
+            logging.info('Evaluation updated to test mode')
         else:
-            self.gold_tree = model.test_gold_tree
-            self.token_POS_dict = model.test_token_POS_dict
-        self.comp_file_name = comp_file_name
-        self.mistakes_dict = dict()
+            self.gold_tree = self.model.comp_gold_tree
+            print('Evaluation updated to comp mode')
+            logging.info('Evaluation updated to comp mode')
+        return
 
-    def calculate_accuracy(self):
+    def calculate_accuracy(self, inference_mode=None):
 
-        # change perceptron to test mode, should influence it's gold tree to be test gold tree,
-        # and function edge score to test mode.
-        self.inference_obj.train(False)
+        """
+        :param inference_mode: for updates the class variables to the correct work mode
+        :return:
+        """
+
+        if inference_mode == 'comp':
+            print('can not calculate accuracy for non train/test mode')
+            logging.info('can not calculate accuracy for non train/test mode')
+            return
+
+        # change relevant class variables
+        self.update_inference_mode(inference_mode)
+
+        # change perceptron to train/test mode, should influence it's gold tree to be train/test gold tree,
+        # and function edge score to train/test mode.
+        self.inference_obj.inference_mode(self.inference_mode)
+
         data_mistake_num = 0
+        data_num_tokens = len(self.token_POS_dict['token'].keys())
+        sentences_count = 0
+        mistakes_dict = dict()
 
-        key_max = max(self.token_POS_dict['token'].keys(), key=(lambda k: self.token_POS_dict['token'][k]))
-        data_num_tokens = self.token_POS_dict['token'][key_max]
-
+        print('start calculating accuracy')
+        logging.info('start calculating accuracy')
         for t in range(len(self.gold_tree)):
             sentence_mistake_num = 0
             gold_sentence = self.gold_tree[t]
             pred_tree = self.inference_obj.calculate_mst(t)
             for source, targets in gold_sentence.items:
-                mistakes = set(targets).difference(set(pred_tree[source]))
-                data_mistake_num += len(mistakes)
-                sentence_mistake_num += len(mistakes)
-                if not t in self.mistakes_dict.keys():
-                    self.mistakes_dict[t] = dict()
-                    self.mistakes_dict[t][source] = mistakes
+                missed_targets = set(targets).difference(set(pred_tree[source]))
+                wrong_targets = set(pred_tree[source]).difference(set(targets))
+                data_mistake_num += len(missed_targets)
+                sentence_mistake_num += len(missed_targets)
+                if not t in mistakes_dict.keys():
+                    mistakes_dict[t] = dict()
+                    mistakes_dict[t][source] = dict()
+                    mistakes_dict[t][source]['missed_targets'] = missed_targets
+                    mistakes_dict[t][source]['wrong_targets'] = wrong_targets
                 else:
-                    self.mistakes_dict[t][source] = mistakes
+                    mistakes_dict[t][source][['missed_targets']] = missed_targets
+                    mistakes_dict[t][source] = dict()
+                    mistakes_dict[t][source]['missed_targets'] = missed_targets
+                    mistakes_dict[t][source]['wrong_targets'] = wrong_targets
+            sentences_count += 1
+        accuracy = 1 - data_mistake_num/(data_num_tokens - sentences_count)
+        logging.info('{}: Accuracy for {} is : {} '.format(time.asctime(time.localtime(time.time())),
+                                                           self.inference_mode, accuracy ))
+        print('{}: accuracy for {} is: {} '.format(time.asctime(time.localtime(time.time())), self.inference_mode,
+                                                   accuracy))
 
+        print('{}: saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
+        mistakes_dict_name = 'accuracy_{}_mistakes_dict_{}_{}'.format(accuracy, self.inference_mode,
+                                                             time.asctime(time.localtime(time.time())))
+        w = csv.writer(open( self.directory + mistakes_dict_name + '.csv', "w"))
+        for key, val in mistakes_dict.items():
+            w.writerow([key, val])
+        print('{}: finished saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: finished saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
 
+        return accuracy, mistakes_dict_name
 
+    def infer(self, comp_file_name, inference_mode=None):
 
+        """
+        :param comp_file_name: if evaluation class is for inference on competition data
+        :param inference_mode: for updates the class variables to the correct work mode
+        """
 
+        # change relevant class variables
+        self.update_inference_mode(inference_mode)
 
-
-
-
+        # change perceptron to comp mode in order to only calculate mst, using comp gold tree and edge score comp
+        self.inference_obj.inference_mode(inference_mode)
+        comp_file_name = comp_file_name
 
         return
+
+
+
+
+
+
+
 
 # class Evaluate:
 #     """

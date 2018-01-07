@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from struct_perceptron import StructPerceptron
 from parser_model import ParserModel
+from evaluation import Evaluate
 
 # open log connection
 directory = "C:\\Users\\ssheiba\\Desktop\\MASTER\\NLP\\NLP_HW2\\"
@@ -96,7 +97,8 @@ def main(train_file_to_use, test_file_to_use, test_type, features_combination_li
         # TODO: change according to the new evaluation part
         # write_file_name = datetime.now().strftime(directory + 'file_results/result_MEMM_basic_model_final__' + test_type +
         #                                           '%d_%m_%Y_%H_%M.wtag')
-        # evaluate_class = Evaluate(parser_model_obj, weights, write_file_name, comp=comp)
+        evaluate_obj = Evaluate(parser_model_obj, perceptron_obj, directory)
+
         # if not comp:
         #     word_results_dictionary = evaluate_class.run()
         # if comp:
