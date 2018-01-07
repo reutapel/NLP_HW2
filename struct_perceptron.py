@@ -166,7 +166,7 @@ class StructPerceptron:
         :return: True if the tree is valid
         :rtype: bool
         """
-        if len(pred_tree[self._ROOT]) != 1:
+        if self._mode != 'train' and len(pred_tree[self._ROOT]) != 1:
             return False
         set_of_nodes = self.sets_of_nodes[t]
         for node in set_of_nodes:
