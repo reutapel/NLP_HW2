@@ -29,7 +29,7 @@ class Evaluate:
         self.gold_tree = None
         self.token_POS_dict = None
         self.inference_mode = None
-        self.directory = os.path.join(directory + 'evaluations\\')
+        self.directory = os.path.join(directory, 'evaluations')
 
     def update_inference_mode(self, inference_mode):
 
@@ -111,7 +111,7 @@ class Evaluate:
         logging.info('{}: saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
         mistakes_dict_name = 'accuracy_{}_mistakes_dict_{}_{}'.format(accuracy, self.inference_mode,
                                                              time.asctime(time.localtime(time.time())))
-        w = csv.writer(open( self.directory + mistakes_dict_name + '.csv', "w"))
+        w = csv.writer(open(os.path.join(self.directory, "{}.csv".format(mistakes_dict_name), "w")))
         for key, val in mistakes_dict.items():
             w.writerow([key, val])
         print('{}: finished saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
