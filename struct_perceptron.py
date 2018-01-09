@@ -58,6 +58,8 @@ class StructPerceptron:
         else:  # mode == 'comp'
             self._mode = mode
             self.gold_tree = self.comp_gold_tree
+        self.sets_of_nodes = {} # clear the set of nodes
+        self.full_graph = {}
         self.create_full_graph()
 
     def perceptron(self, num_of_iter):
@@ -97,6 +99,8 @@ class StructPerceptron:
         :rtype: dict[int, List[int]]
         :raise AssertionError: with argument of the defected predicated tree
         """
+        if self.current_sentence != t:
+            self.current_sentence = t
         pred_tree = self.full_graph.get(t)
         digraph = Digraph(pred_tree, get_score=self.edge_score)
         new_graph = digraph.mst()

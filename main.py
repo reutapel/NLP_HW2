@@ -1,4 +1,6 @@
 import time
+
+import os
 from sklearn.model_selection import KFold
 import logging
 from datetime import datetime
@@ -7,7 +9,12 @@ from parser_model import ParserModel
 from evaluation import Evaluate
 
 # open log connection
-directory = "C:\\Users\\ssheiba\\Desktop\\MASTER\\NLP\\NLP_HW2\\"
+sub_dirs = ["logs", "evaluations", "dict"]
+base_directory = os.path.abspath(os.curdir)
+directory = os.path.join(base_directory, "output", datetime.now().strftime("%d_%m_%Y_%H_%M_%S"))
+for sub_dir in sub_dirs:
+    os.makedirs(os.path.join(directory, sub_dir))
+directory += os.sep
 LOG_FILENAME = datetime.now().strftime(directory + 'logs\\LogFile_basic_model_%d_%m_%Y_%H_%M.log')
 logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
 
@@ -136,9 +143,9 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
-    train_file = directory + 'HW2-files/train_small.labeled'
-    test_file = directory + 'HW2-files/test_small.labeled'
-    comp_file = directory + 'HW2-files/comp.unlabeled'
+    train_file = os.path.join(base_directory, 'HW2-files', 'train_small.labeled')
+    test_file = os.path.join(base_directory, 'HW2-files', 'test_small.labeled')
+    comp_file = os.path.join(base_directory, 'HW2-files', 'comp.unlabeled')
     cv = False
     comp = False
     if cv:
