@@ -9,6 +9,7 @@ import os
 
 
 class Evaluate:
+
     """
     this class evaluates the results by calculating accuracy, and creates the predicted file for the competition.
     also makes analysis of test results.
@@ -20,8 +21,8 @@ class Evaluate:
         :param model: Dependency tree model object
         :param inference_obj: perceptron obj that calls the CLE inference class
         """
-        print('building class Evaluate instance')
-        logging.info('building class Evaluate instance')
+        print('{}: Building class Evaluate instance'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: Building class Evaluate instance'.format(time.asctime(time.localtime(time.time()))))
 
         self.model = model
         self.inference_obj = inference_obj
@@ -41,17 +42,17 @@ class Evaluate:
         if self.inference_mode == 'train':
             self.gold_tree = self.model.train_gold_tree
             self.token_POS_dict = self.model.train_token_POS_dict
-            print('Evaluation updated to train mode')
-            logging.info('Evaluation updated to train mode')
+            print('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
+            logging.info('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
         elif self.inference_mode == 'test':
             self.gold_tree = self.model.test_gold_tree
             self.token_POS_dict = self.model.test_token_POS_dict
-            print('Evaluation updated to test mode')
-            logging.info('Evaluation updated to test mode')
+            print('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
+            logging.info('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
         else:
             self.gold_tree = self.model.comp_gold_tree
-            print('Evaluation updated to comp mode')
-            logging.info('Evaluation updated to comp mode')
+            print('{}: Evaluation updated to comp mode'.format(time.asctime(time.localtime(time.time()))))
+            logging.info('{}: Evaluation updated to comp mode'.format(time.asctime(time.localtime(time.time()))))
         return
 
     def calculate_accuracy(self, inference_mode=None):
@@ -78,13 +79,13 @@ class Evaluate:
         sentences_count = 0
         mistakes_dict = dict()
 
-        print('start calculating accuracy')
-        logging.info('start calculating accuracy')
+        print('{}: Start calculating accuracy'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: Start calculating accuracy'.format(time.asctime(time.localtime(time.time()))))
         for t in range(len(self.gold_tree)):
             sentence_mistake_num = 0
             gold_sentence = self.gold_tree[t]
             pred_tree = self.inference_obj.calculate_mst(t)
-            for source, targets in gold_sentence.items():  # todo: Rom added parentheses
+            for source, targets in gold_sentence.items():
                 missed_targets = set(targets).difference(set(pred_tree[source]))
                 wrong_targets = set(pred_tree[source]).difference(set(targets))
                 data_mistake_num += len(missed_targets)
@@ -95,7 +96,6 @@ class Evaluate:
                     mistakes_dict[t][source]['missed_targets'] = missed_targets
                     mistakes_dict[t][source]['wrong_targets'] = wrong_targets
                 else:
-                    # mistakes_dict[t][source][['missed_targets']] = missed_targets  # todo: Rom removed
                     mistakes_dict[t][source] = dict()
                     mistakes_dict[t][source]['missed_targets'] = missed_targets
                     mistakes_dict[t][source]['wrong_targets'] = wrong_targets
@@ -110,9 +110,8 @@ class Evaluate:
         print('{}: saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
         mistakes_dict_name = 'accuracy_{}_mistakes_dict_{}_{}'.format(accuracy, self.inference_mode,
-                                                                      time.asctime(time.localtime(time.time())).replace(
-                                                                          ' ', '_').replace(':', '_'))
-        w = csv.writer(open(self.directory + mistakes_dict_name + '.csv', "w"))
+                                                             time.asctime(time.localtime(time.time())))
+        w = csv.writer(open( self.directory + mistakes_dict_name + '.csv', "w"))
         for key, val in mistakes_dict.items():
             w.writerow([key, val])
         print('{}: finished saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
@@ -135,6 +134,13 @@ class Evaluate:
         comp_file_name = comp_file_name
 
         return
+
+
+
+
+
+
+
 
 # class Evaluate:
 #     """
