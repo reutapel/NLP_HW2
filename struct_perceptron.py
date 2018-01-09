@@ -181,8 +181,7 @@ class StructPerceptron:
         :param gold_tree: the gold labeled tree (graph with the correct edges)
         :return:
         """
-        pred_sources_without_targets = set(source for source, targets in pred_tree.items() if len(targets) >= 1)
-        if set(gold_tree.keys()) != pred_sources_without_targets:
+        if set(gold_tree.keys()) != set(pred_tree.keys()):
             return False
         for gold_source, gold_targets in gold_tree.items():
             pred_source = gold_source
