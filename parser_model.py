@@ -186,6 +186,9 @@ class ParserModel:
                     sentence_dict = dict()
 
             if mode != 'comp':
+                # for each node add the sentence[token_counter]
+                if row['token_counter'] not in sentence_dict.keys():
+                    sentence_dict[row['token_counter']] = []
                 # add the edge: {head: target}
                 if row['token_head'] in sentence_dict.keys():
                     sentence_dict[row['token_head']].append(row['token_counter'])
