@@ -14,6 +14,8 @@ class StructPerceptron:
         :param model: an object of the model, which will create for a given edge its feature vector
         :type model: parser_model.ParserModel
         """
+        # constant which represent the 'root' node in the data
+        self._ROOT = 0
         self.model = model
         # number of features
         self.feature_vec_len = model.feature_vec_len
@@ -33,8 +35,6 @@ class StructPerceptron:
         self._mode = mode
         self.gold_tree = None
         self.inference_mode(mode)
-        # constant which represent the 'root' node in the data
-        self._ROOT = 0
 
     def inference_mode(self, mode='train'):
         """
@@ -166,7 +166,7 @@ class StructPerceptron:
         :return: True if the tree is valid
         :rtype: bool
         """
-        if len(pred_tree[self._ROOT]) != 1:
+        if self._mode != 'train' and len(pred_tree[self._ROOT]) != 1:
             return False
         set_of_nodes = self.sets_of_nodes[t]
         for node in set_of_nodes:
