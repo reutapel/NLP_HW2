@@ -30,7 +30,7 @@ class ParserModel:
         self.features_path_string = ''
         for feature in features_combination:
             self.features_path_string += feature + '_'
-        self.dict_path = os.path.join(directory + 'dict/', self.features_path_string)
+        self.dict_path = os.path.join(directory, 'dict', self.features_path_string)
 
         self.feature_vec_len = 0
         """create train data and gold trees dict"""
@@ -655,10 +655,10 @@ class ParserModel:
 
 if __name__ == '__main__':
     all_start_time = time.time()
-    curr_directory = '/Users/reutapel/Documents/Technion/Msc/NLP/hw2/NLP_HW2/'
-    train_file = curr_directory + 'HW2-files/train.labeled'
-    test_file = curr_directory + 'HW2-files/test.labeled'
-    comp_file = curr_directory + 'HW2-files/comp.unlabeled'
+    curr_directory = os.path.abspath(os.curdir)    # '/Users/reutapel/Documents/Technion/Msc/NLP/hw2/NLP_HW2/'
+    train_file = os.path.join(curr_directory, 'HW2-files', 'train.labeled')
+    test_file = os.path.join(curr_directory, 'HW2-files', 'test.labeled')
+    comp_file = os.path.join(curr_directory, 'HW2-files', 'comp.unlabeled')
 
     features = range(1, 19)
     features = [str(i) for i in features]

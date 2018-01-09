@@ -92,7 +92,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
               format(time.asctime(time.localtime(time.time())), features_combination, num_of_iter))
         logging.info('{}: Start Perceptron for features : {} and number of iterations: {}'.
                      format(time.asctime(time.localtime(time.time())), features_combination, num_of_iter))
-        perceptron_obj = StructPerceptron(model=parser_model_obj)
+        perceptron_obj = StructPerceptron(model=parser_model_obj, directory=directory)
         weights = perceptron_obj.perceptron(num_of_iter=num_of_iter)
 
         train_run_time = (time.time() - train_start_time) / 60.0
@@ -108,7 +108,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
         accuracy, mistakes_dict_name = evaluate_obj.calculate_accuracy(test_type)
 
         print('{}: The model hyper parameters and results are: \n num_of_iter: {} \n test file: {} \n train file: {} '
-              '\n test type: {} \n features combination list: {} \n accuracy: {} \n mistakes dict name: {}'
+              '\n test type: {} \n features combination list: {} \n accuracy: {:%} \n mistakes dict name: {}'
               .format(time.asctime(time.localtime(time.time())), num_of_iter, test_file_to_use, train_file_to_use,
                       test_type, features_combination_list, accuracy, mistakes_dict_name))
         logging.info('{}: The model hyper parameters and results are: \n num_of_iter: {} \n test file: {}'
@@ -144,8 +144,8 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
-    train_file = os.path.join(base_directory, 'HW2-files', 'train_small.labeled')
-    test_file = os.path.join(base_directory, 'HW2-files', 'test_small.labeled')
+    train_file = os.path.join(base_directory, 'HW2-files', 'train.labeled')
+    test_file = os.path.join(base_directory, 'HW2-files', 'test.labeled')
     comp_file = os.path.join(base_directory, 'HW2-files', 'comp.unlabeled')
     cv = False
     comp = False
