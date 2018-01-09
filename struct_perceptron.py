@@ -97,6 +97,7 @@ class StructPerceptron:
         :rtype: dict[int, List[int]]
         :raise AssertionError: with argument of the defected predicated tree
         """
+        self.current_sentence = t  # in order to call correctly to edge_score in evaluation mode
         pred_tree = self.full_graph.get(t)
         digraph = Digraph(pred_tree, get_score=self.edge_score)
         new_graph = digraph.mst()
@@ -136,6 +137,7 @@ class StructPerceptron:
         :param target: a target node
         :return: score value
         """
+
         feature_vec = self.model.get_local_feature_vec(self.current_sentence, source, target, mode=self._mode)
         return self.current_weight_vec.dot(feature_vec)
 

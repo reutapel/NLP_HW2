@@ -7,7 +7,7 @@ from parser_model import ParserModel
 from evaluation import Evaluate
 
 # open log connection
-directory = "C:\\Users\\ssheiba\\Desktop\\MASTER\\NLP\\NLP_HW2\\"
+directory = '/Users/reutapel/Documents/Technion/Msc/NLP/hw2/NLP_HW2/'
 LOG_FILENAME = datetime.now().strftime(directory + 'logs\\LogFile_basic_model_%d_%m_%Y_%H_%M.log')
 logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
 
@@ -138,7 +138,7 @@ if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     train_file = directory + 'HW2-files/train_small.labeled'
-    test_file = directory + 'HW2-files/test_small.labeled'
+    test_file = directory + 'HW2-files/test.labeled'
     comp_file = directory + 'HW2-files/comp.unlabeled'
     cv = False
     comp = False

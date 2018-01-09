@@ -21,8 +21,8 @@ class Evaluate:
         :param model: Dependency tree model object
         :param inference_obj: perceptron obj that calls the CLE inference class
         """
-        print('building class Evaluate instance')
-        logging.info('building class Evaluate instance')
+        print('{}: Building class Evaluate instance'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: Building class Evaluate instance'.format(time.asctime(time.localtime(time.time()))))
 
         self.model = model
         self.inference_obj = inference_obj
@@ -42,17 +42,17 @@ class Evaluate:
         if self.inference_mode == 'train':
             self.gold_tree = self.model.train_gold_tree
             self.token_POS_dict = self.model.train_token_POS_dict
-            print('Evaluation updated to train mode')
-            logging.info('Evaluation updated to train mode')
+            print('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
+            logging.info('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
         elif self.inference_mode == 'test':
             self.gold_tree = self.model.test_gold_tree
             self.token_POS_dict = self.model.test_token_POS_dict
-            print('Evaluation updated to test mode')
-            logging.info('Evaluation updated to test mode')
+            print('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
+            logging.info('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
         else:
             self.gold_tree = self.model.comp_gold_tree
-            print('Evaluation updated to comp mode')
-            logging.info('Evaluation updated to comp mode')
+            print('{}: Evaluation updated to comp mode'.format(time.asctime(time.localtime(time.time()))))
+            logging.info('{}: Evaluation updated to comp mode'.format(time.asctime(time.localtime(time.time()))))
         return
 
     def calculate_accuracy(self, inference_mode=None):
@@ -79,31 +79,30 @@ class Evaluate:
         sentences_count = 0
         mistakes_dict = dict()
 
-        print('start calculating accuracy')
-        logging.info('start calculating accuracy')
+        print('{}: Start calculating accuracy'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: Start calculating accuracy'.format(time.asctime(time.localtime(time.time()))))
         for t in range(len(self.gold_tree)):
             sentence_mistake_num = 0
             gold_sentence = self.gold_tree[t]
             pred_tree = self.inference_obj.calculate_mst(t)
-            for source, targets in gold_sentence.items:
+            for source, targets in gold_sentence.items():
                 missed_targets = set(targets).difference(set(pred_tree[source]))
                 wrong_targets = set(pred_tree[source]).difference(set(targets))
                 data_mistake_num += len(missed_targets)
                 sentence_mistake_num += len(missed_targets)
-                if not t in mistakes_dict.keys():
+                if t not in mistakes_dict.keys():
                     mistakes_dict[t] = dict()
                     mistakes_dict[t][source] = dict()
                     mistakes_dict[t][source]['missed_targets'] = missed_targets
                     mistakes_dict[t][source]['wrong_targets'] = wrong_targets
                 else:
-                    mistakes_dict[t][source][['missed_targets']] = missed_targets
                     mistakes_dict[t][source] = dict()
                     mistakes_dict[t][source]['missed_targets'] = missed_targets
                     mistakes_dict[t][source]['wrong_targets'] = wrong_targets
             sentences_count += 1
         accuracy = 1 - data_mistake_num/(data_num_tokens - sentences_count)
         logging.info('{}: Accuracy for {} is : {} '.format(time.asctime(time.localtime(time.time())),
-                                                           self.inference_mode, accuracy ))
+                                                           self.inference_mode, accuracy))
         print('{}: accuracy for {} is: {} '.format(time.asctime(time.localtime(time.time())), self.inference_mode,
                                                    accuracy))
 
