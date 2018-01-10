@@ -7,6 +7,7 @@ import numpy as np
 from collections import defaultdict
 from copy import copy
 from scipy.sparse import csr_matrix
+from struct_perceptron import GraphUntil
 
 
 class ParserModel:
@@ -33,6 +34,14 @@ class ParserModel:
         self.dict_path = os.path.join(directory, 'dict', self.features_path_string)
 
         self.feature_vec_len = 0
+        # declare gold tree dict:
+        # for each mode: a dictionary where keys are the sentence index and the values are dictionaries where their
+        # keys are the head node and the value ia a list of its target nodes, i.e all edges of the sentence
+        # The format: {{mode: sentence_index: {source_node: [target_nodes]}}}
+        self.gold_tree = {'train': defaultdict(list),
+                          'test': defaultdict(list),
+                          'comp': defaultdict(list)}
+
         """create train data and gold trees dict"""
         self.train_data = pd.read_table(train_file_name, header=None, names=self.file_columns_names)
         # add relevant columns:
@@ -43,10 +52,7 @@ class ParserModel:
         #                          token_POS: {(sentence_index, token_counter), token_POS)}
         #                           we will use it for the head_word and head_POS assignment
         self.train_token_POS_dict = dict()
-        # a dictionary where keys are the sentence index and the values are dictionaries where their keys are
-        # the head node and the value ia a list of its target nodes, i.e all edges of the sentence
-        # The format: {sentence_index: {source_node: [target_nodes]}}
-        self.train_gold_tree = self.create_gold_tree_dictionary('train')
+        self.create_gold_tree_dictionary('train')
 
         """create test data and gold trees dict"""
         self.test_data = pd.read_table(test_file_name, header=None, names=self.file_columns_names)
@@ -58,10 +64,7 @@ class ParserModel:
         #                          token_POS: {(sentence_index, token_counter), token_POS)}
         #                           we will use it for the head_word and head_POS assignment
         self.test_token_POS_dict = dict()
-        # a dictionary where keys are the sentence index and the values are dictionaries where their keys are
-        # the head node and the value ia a list of its target nodes, i.e all edges of the sentence
-        # The format: {sentence_index: {source_node: [target_nodes]}}
-        self.test_gold_tree = self.create_gold_tree_dictionary('test')
+        self.create_gold_tree_dictionary('test')
 
         """create comp data and gold trees dict"""
         self.comp_data = pd.read_table(comp_file_name, header=None, names=self.file_columns_names)
@@ -70,10 +73,7 @@ class ParserModel:
         #                          token_POS: {(sentence_index, token_counter), token_POS)}
         #                           we will use it for the head_word and head_POS assignment
         self.comp_token_POS_dict = dict()
-        # a dictionary where keys are the sentence index and the values are dictionaries where their keys are
-        # the head node and the value ia a list of its target nodes, i.e all edges of the sentence
-        # The format: {sentence_index: {source_node: [target_nodes]}}
-        self.comp_gold_tree = self.create_gold_tree_dictionary('comp')
+        self.create_gold_tree_dictionary('comp')
 
         self.features_combination = features_combination
 
@@ -108,9 +108,17 @@ class ParserModel:
         self.features_vector_mapping = {}
 
         # feature vectors for the gold trees
-        # The format is: {sentence_index: feature_vector}
-        self.features_vector_train = defaultdict(list)
-        self.features_vector_test = defaultdict(list)
+        # The format is: {mode: {sentence_index: feature_vector}}
+        self.gold_tree_features_vector = {'train': defaultdict(list),
+                                          'test': defaultdict(list)}
+
+        # feature vectors for the full graphs
+        # The format is: {mode: {sentence_index: {(head, target): feature_vector}}}
+        self.full_graph_features_vector = {'train': defaultdict(list),
+                                           'test': defaultdict(list)}
+
+        # create object of the GraphUtils
+        self.graph_utils = GraphUntil()
 
         """Create the features vectors"""
         # build the type of features
@@ -118,8 +126,8 @@ class ParserModel:
         # build the features_vector
         self.build_features_vector()
         # build the feature vector for each tree gold of the train and the test data
-        self.create_feature_vector('train')
-        self.create_feature_vector('test')
+        self.create_gold_tree_feature_vector('train')
+        self.create_gold_tree_feature_vector('test')
 
     def define_features_dicts(self):
         """
@@ -157,6 +165,7 @@ class ParserModel:
         :param mode will be the data we want to create a dictionary based on it (train, test of comp file)
         :return: a dictionary where keys are the sentence index and the values are dictionaries where their keys are
         the head node and the value ia a list of its target nodes, i.e all edges of the sentence
+        --> no return - insert into self.gold_tree[mode]
         """
 
         print('{}: Start building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
@@ -172,7 +181,6 @@ class ParserModel:
             print('Data is not train, test or comp: cant create gold tree')
             return dict()
 
-        gold_tree = dict()
         sentence_index = -1
         sentence_dict = dict()
         for index, row in data.iterrows():
@@ -181,7 +189,7 @@ class ParserModel:
                 if sentence_index == -1:  # if this is the first sentence - there is no previous sentence
                     sentence_index += 1
                 else:  # if this is not the first sentence - insert the list of the previous sen. to the gold tree dict
-                    gold_tree[sentence_index] = sentence_dict
+                    self.gold_tree[mode][sentence_index] = sentence_dict
                     sentence_index += 1
                     sentence_dict = dict()
 
@@ -204,7 +212,8 @@ class ParserModel:
                     sentence_dict[0] = [row['token_counter']]
                 else:  # if this is not the first word- append it to the list
                     sentence_dict[0].append(row['token_counter'])
-        gold_tree[sentence_index] = sentence_dict
+        # for the last sentence
+        self.gold_tree[mode][sentence_index] = sentence_dict
         sentence_index += 1
 
         # after we have the sentence index- we will create the data_token_pos_dict
@@ -224,7 +233,7 @@ class ParserModel:
             logging.info(
                 '{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
 
-            return gold_tree
+            return
 
         # add the head word and POS for each target
         for index, row in data.iterrows():
@@ -236,7 +245,7 @@ class ParserModel:
         print('{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
         logging.info('{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
 
-        return gold_tree
+        return
 
     def build_features_from_train(self):
         """
@@ -609,23 +618,12 @@ class ParserModel:
         csr_tree_indexes_vector = csr_matrix(tree_indexes_vector)
         return csr_tree_indexes_vector
 
-    def create_feature_vector(self, mode):
+    def create_gold_tree_feature_vector(self, mode):
         """
         create feature vectors for the tree gold of each of the sentences in the train data
         :param mode: the data type: train or test
         :return: no return, just save the dictionary with the feature vector for each sentence
         """
-
-        if mode == 'train':
-            features_vector = self.features_vector_train
-            gold_tree = self.train_gold_tree
-
-        elif mode == 'test':
-            features_vector = self.features_vector_test
-            gold_tree = self.test_gold_tree
-        else:
-            print('Data is not train and not test: cant create feature vectors for gold trees')
-            return defaultdict(list)
 
         start_time = time.time()
         print('{}: Starting building feature vectors for gold trees {}'.
@@ -633,8 +631,46 @@ class ParserModel:
         logging.info('{}: Starting building feature vectors for gold trees {}'.
                      format(time.asctime(time.localtime(time.time())), mode))
 
-        for sentence_index, sentence_tree in gold_tree.items():
-            features_vector[sentence_index] = self.create_global_feature_vector(sentence_tree, sentence_index, mode)
+        for sentence_index, sentence_tree in self.gold_tree[mode].items():
+            self.gold_tree_features_vector[mode][sentence_index] =\
+                self.create_global_feature_vector(sentence_tree, sentence_index, mode)
+
+        print('{}: Finished building feature vectors for gold trees {} in : {}'.
+              format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
+        logging.info('{}: Finished building feature vectors for gold trees {} in : {}'.
+                     format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
+
+        print('{}: Saving feature vectors for gold trees {}'.format(time.asctime(time.localtime(time.time())), mode))
+        logging.info('{}: Saving feature vectors for gold trees {}'.format(time.asctime(time.localtime(time.time())), mode))
+        w = csv.writer(open(self.dict_path + 'features_vector_' + mode + '.csv', "w"))
+        for key, val in self.gold_tree_features_vector.items():
+            w.writerow([key, val])
+
+        print('{}: Finished saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), mode))
+        logging.info('{}: Finished saving feature vectors {}'.format(time.asctime(time.localtime(time.time())), mode))
+
+        return
+
+    def create_full_feature_vector(self, mode):
+        """
+        create feature vectors for the full graph of each of the sentences in the train data
+        :param mode: the data type: train or test
+        :return: no return, just save the dictionary with the feature vector for each sentence
+        """
+
+        start_time = time.time()
+        print('{}: Starting building feature vectors for gold trees {}'.
+              format(time.asctime(time.localtime(time.time())), mode))
+        logging.info('{}: Starting building feature vectors for gold trees {}'.
+                     format(time.asctime(time.localtime(time.time())), mode))
+
+        # get full graphs for the mode
+        _, full_graphs = self.graph_utils.create_full_graph(self.gold_tree[mode])
+        for sentence_index, sentence_full_graph in full_graphs:
+            for source, target_list in sentence_full_graph.item():
+                for target in target_list:
+                    self.full_graph_features_vector[mode][sentence_index][(source, target)] =\
+                        self.get_local_feature_vec(sentence_index, source, target, mode)
 
         print('{}: Finished building feature vectors for gold trees {} in : {}'.
               format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
