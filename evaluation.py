@@ -40,17 +40,17 @@ class Evaluate:
 
         self.inference_mode = inference_mode
         if self.inference_mode == 'train':
-            self.gold_tree = self.model.train_gold_tree
-            self.token_POS_dict = self.model.train_token_POS_dict
+            self.gold_tree = self.model.gold_tree[inference_mode]
+            self.token_POS_dict = self.model.token_POS_dict[inference_mode]
             print('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
             logging.info('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
         elif self.inference_mode == 'test':
-            self.gold_tree = self.model.test_gold_tree
-            self.token_POS_dict = self.model.test_token_POS_dict
+            self.gold_tree = self.model.gold_tree[inference_mode]
+            self.token_POS_dict = self.model.token_POS_dict[inference_mode]
             print('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
             logging.info('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
         else:
-            self.gold_tree = self.model.comp_gold_tree
+            self.gold_tree = self.model.gold_tree[inference_mode]
             print('{}: Evaluation updated to comp mode'.format(time.asctime(time.localtime(time.time()))))
             logging.info('{}: Evaluation updated to comp mode'.format(time.asctime(time.localtime(time.time()))))
         return
