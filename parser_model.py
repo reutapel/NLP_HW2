@@ -211,7 +211,7 @@ class ParserModel:
         data_token_pos_dict = data[['token', 'token_POS', 'sentence_index', 'token_counter']]\
             .set_index(['sentence_index', 'token_counter']).to_dict()
         # add the root
-        for root_index in range(sentence_index + 1):
+        for root_index in range(sentence_index):
             data_token_pos_dict['token'][(root_index, 0)] = 'root'
             data_token_pos_dict['token_POS'][(root_index, 0)] = 'root'
 
