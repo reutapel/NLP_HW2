@@ -15,7 +15,7 @@ directory = os.path.join(base_directory, "output", datetime.now().strftime("%d_%
 for sub_dir in sub_dirs:
     os.makedirs(os.path.join(directory, sub_dir))
 directory += os.sep
-LOG_FILENAME = datetime.now().strftime(directory + 'logs\\LogFile_basic_model_%d_%m_%Y_%H_%M.log')
+LOG_FILENAME = datetime.now().strftime(os.path.join(directory, 'logs', 'LogFile_basic_model_%d_%m_%Y_%H_%M.log'))
 logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
 
 
@@ -144,7 +144,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
-    train_file = os.path.join(base_directory, 'HW2-files', 'train.labeled')
+    train_file = os.path.join(base_directory, 'HW2-files', 'train_small.labeled')
     test_file = os.path.join(base_directory, 'HW2-files', 'test.labeled')
     comp_file = os.path.join(base_directory, 'HW2-files', 'comp.unlabeled')
     cv = False

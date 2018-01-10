@@ -105,8 +105,8 @@ class StructPerceptron:
                         self.weight_matrix.append(new_weight_vec)
                         self.current_weight_vec_iter += 1
                         self.current_weight_vec = new_weight_vec
-        with open(os.path.join(self.directory, 'final_weight_vec.pkl'), 'wb') as f:
-            pickle.dump(self.current_weight_vec, f)
+        # with open(os.path.join(self.directory, 'final_weight_vec.pkl'), 'wb') as f:
+            # pickle.dump(self.current_weight_vec, f)
         with open(os.path.join(self.directory, 'weights_matrix.pkl'), 'wb') as f:
             pickle.dump(self.weight_matrix, f)
         return self.current_weight_vec
