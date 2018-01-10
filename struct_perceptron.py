@@ -7,6 +7,8 @@ import pickle
 
 
 # TODO - Understand when should the perceptron stop updating weights
+# todo: change to csr_matrix
+# todo: take out the full_graph
 class StructPerceptron:
     """
     this class implements the structured perceptron, calculates the best weights
