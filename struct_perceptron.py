@@ -32,11 +32,9 @@ class StructPerceptron:
         self.model = model
         # number of features
         self.feature_vec_len = model.feature_vec_len
-        self.train_gold_tree = model.train_gold_tree
-        self.test_gold_tree = model.test_gold_tree
-        self.comp_gold_tree = model.comp_gold_tree
+        self.global_gold_tree = model.gold_tree
         # the feature vector of a complete sentence in the training
-        self.features_vector_train = model.features_vector_train
+        self.features_vector_train = model.gold_tree_features_vector['train']
         self.weight_matrix = []
         self.current_weight_vec_iter = 0
         self.current_weight_vec = csr_matrix((1, self.feature_vec_len), dtype=int)
@@ -61,15 +59,8 @@ class StructPerceptron:
         * competition mode ('comp')
         :return: None
         """
-        if mode == 'train':
-            self._mode = mode
-            self.gold_tree = self.train_gold_tree
-        elif mode == 'test':
-            self._mode = mode
-            self.gold_tree = self.test_gold_tree
-        else:  # mode == 'comp'
-            self._mode = mode
-            self.gold_tree = self.comp_gold_tree
+        self._mode = mode
+        self.gold_tree = self.global_gold_tree[mode]
         print('{}: Start Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: Start Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
         self.sets_of_nodes, self.full_graph = GraphUntil.create_full_graph(gold_tree=self.gold_tree)
@@ -101,7 +92,6 @@ class StructPerceptron:
                     if not GraphUntil.identical_dependency_tree(pred_tree, self.gold_tree[t]):
                         curr_feature_vec = self.features_vector_train[t]
                         new_feature_vec = self.model.create_global_feature_vector(pred_tree, t, mode=self._mode)
-                        new_weight_vec = csr_matrix((1, self.feature_vec_len), dtype=int)
                         new_weight_vec = self.current_weight_vec + curr_feature_vec - new_feature_vec
                         self.weight_matrix.append(new_weight_vec)
                         self.current_weight_vec_iter += 1
@@ -149,7 +139,7 @@ class StructPerceptron:
         :return: score value
         """
         # type: csr_matrix
-        feature_vec = self.model.get_local_feature_vec(self.current_sentence, source, target, mode=self._mode)
+        feature_vec = self.model.full_graph_features_vector[self._mode][self.current_sentence][(source, target)]
         return self.current_weight_vec.dot(feature_vec.T).todense().item()
 
     def check_valid_tree(self, pred_tree, t):
