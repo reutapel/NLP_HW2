@@ -4,6 +4,7 @@ import numpy as np
 import time
 from chu_liu import Digraph
 import pickle
+from scipy.sparse import csr_matrix
 
 
 # TODO - Understand when should the perceptron stop updating weights
@@ -38,7 +39,7 @@ class StructPerceptron:
         self.features_vector_train = model.features_vector_train
         self.weight_matrix = []
         self.current_weight_vec_iter = 0
-        self.current_weight_vec = np.zeros(shape=self.feature_vec_len)
+        self.current_weight_vec = csr_matrix((1, self.feature_vec_len), dtype=int)
         self.current_sentence = 0
         # full graph contains a full graph + root per sentence {sentence_id: {parent_node: [child_nods]}}
         self.full_graph = {}
@@ -69,11 +70,9 @@ class StructPerceptron:
         else:  # mode == 'comp'
             self._mode = mode
             self.gold_tree = self.comp_gold_tree
-        self.sets_of_nodes = {}  # clear the set of nodes
         print('{}: Start Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: Start Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
-        self.full_graph = {}
-        self.create_full_graph()
+        self.sets_of_nodes, self.full_graph = GraphUntil.create_full_graph(gold_tree=self.gold_tree)
         print('{}: Finish Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: Finish Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
 
@@ -83,7 +82,7 @@ class StructPerceptron:
 
         :param num_of_iter: N from the pseudo-code
         :return: the final weight vector
-        :rtype: np.ndarray
+        :rtype: csr_matrix[int]
         """
         for i in range(num_of_iter):
             print('{}: Starting Iteration #{}'.format(time.asctime(time.localtime(time.time())), i + 1))
@@ -99,10 +98,10 @@ class StructPerceptron:
                     print("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
                     logging.error("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
                 else:
-                    if not self.identical_dependency_tree(pred_tree, self.gold_tree[t]):
+                    if not GraphUntil.identical_dependency_tree(pred_tree, self.gold_tree[t]):
                         curr_feature_vec = self.features_vector_train[t]
                         new_feature_vec = self.model.create_global_feature_vector(pred_tree, t, mode=self._mode)
-                        new_weight_vec = np.zeros(shape=self.feature_vec_len)
+                        new_weight_vec = csr_matrix((1, self.feature_vec_len), dtype=int)
                         new_weight_vec = self.current_weight_vec + curr_feature_vec - new_feature_vec
                         self.weight_matrix.append(new_weight_vec)
                         self.current_weight_vec_iter += 1
@@ -140,29 +139,6 @@ class StructPerceptron:
         assert self.check_valid_tree(pred_tree, t), pred_tree
         return pred_tree
 
-    def create_full_graph(self):
-        """
-        this method will create for a given gold dependency tree,
-        a fully connected graph from each sentence of it
-
-        :return: a fully connected tree
-        """
-        for idx, sentence in self.gold_tree.items():
-            set_of_nodes = set()
-            for source, targets in sentence.items():
-                set_of_nodes.add(source)
-                set_of_nodes = set_of_nodes.union(set(targets))
-            if self._ROOT in set_of_nodes:
-                set_of_nodes.remove(self._ROOT)
-            self.sets_of_nodes.update({idx: set_of_nodes})
-            graph = {}
-            for node in set_of_nodes:
-                targets = list(set_of_nodes.difference({node}))
-                graph.update({node: targets})
-            graph.update({self._ROOT: list(set_of_nodes)})
-            self.full_graph.update({idx: graph})
-        return
-
     def edge_score(self, source, target):
         """
         this method return a score of likelihood , for a pair of source and target
@@ -172,25 +148,9 @@ class StructPerceptron:
         :param target: a target node
         :return: score value
         """
+        # type: csr_matrix
         feature_vec = self.model.get_local_feature_vec(self.current_sentence, source, target, mode=self._mode)
-        return self.current_weight_vec.dot(feature_vec)
-
-    def identical_dependency_tree(self, pred_tree, gold_tree):
-        """
-        this method evaluate whether two dependency trees are identical
-
-        :param pred_tree: the predicted tree from the algorithm
-        :param gold_tree: the gold labeled tree (graph with the correct edges)
-        :return:
-        """
-        if set(gold_tree.keys()) != set(pred_tree.keys()):
-            return False
-        for gold_source, gold_targets in gold_tree.items():
-            pred_source = gold_source
-            pred_targets = pred_tree[pred_source]
-            if set(pred_targets) != set(gold_targets):
-                return False
-        return True
+        return self.current_weight_vec.dot(feature_vec.T).todense().item()
 
     def check_valid_tree(self, pred_tree, t):
         """
@@ -207,5 +167,56 @@ class StructPerceptron:
         set_of_nodes = self.sets_of_nodes[t]
         for node in set_of_nodes:
             if sum(node in targets for targets in pred_tree.values()) != 1:
+                return False
+        return True
+
+
+class GraphUntil:
+    _ROOT = 0
+
+    @staticmethod
+    def create_full_graph(gold_tree):
+        """
+        this method will create for a given gold dependency tree,
+        a fully connected graph from each sentence of it
+
+        :param gold_tree:
+        :type gold_tree: dict[int,dict[int,list[int]]]
+        :return: set of nodes per graph and full graph
+        :rtype: (dict[int,set[int]], dict[int,dict[int,list[int]]])
+        """
+        sets_of_nodes = {}
+        full_graph = {}
+        for idx, sentence in gold_tree.items():
+            set_of_nodes = set()
+            for source, targets in sentence.items():
+                set_of_nodes.add(source)
+                set_of_nodes = set_of_nodes.union(set(targets))
+            if GraphUntil._ROOT in set_of_nodes:
+                set_of_nodes.remove(GraphUntil._ROOT)
+            sets_of_nodes.update({idx: set_of_nodes})
+            graph = {}
+            for node in set_of_nodes:
+                targets = list(set_of_nodes.difference({node}))
+                graph.update({node: targets})
+            graph.update({GraphUntil._ROOT: list(set_of_nodes)})
+            full_graph.update({idx: graph})
+        return sets_of_nodes, full_graph
+
+    @staticmethod
+    def identical_dependency_tree(pred_tree, gold_tree):
+        """
+        this method evaluate whether two dependency trees are identical
+
+        :param pred_tree: the predicted tree from the algorithm
+        :param gold_tree: the gold labeled tree (graph with the correct edges)
+        :return:
+        """
+        if set(gold_tree.keys()) != set(pred_tree.keys()):
+            return False
+        for gold_source, gold_targets in gold_tree.items():
+            pred_source = gold_source
+            pred_targets = pred_tree[pred_source]
+            if set(pred_targets) != set(gold_targets):
                 return False
         return True
