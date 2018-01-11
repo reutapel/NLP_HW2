@@ -161,7 +161,7 @@ class StructPerceptron:
         return True
 
 
-class GraphUntil:
+class GraphUtil:
     _ROOT = 0
 
     @staticmethod

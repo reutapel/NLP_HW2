@@ -7,7 +7,7 @@ import numpy as np
 from collections import defaultdict
 from copy import copy
 from scipy.sparse import csr_matrix
-from struct_perceptron import GraphUntil
+from struct_perceptron import GraphUtil
 
 
 class ParserModel:
@@ -113,7 +113,7 @@ class ParserModel:
                                            'test': defaultdict(dict)}
 
         # create object of the GraphUtils
-        self.graph_utils = GraphUntil()
+        self.graph_utils = GraphUtil()
 
         """Create the features vectors"""
         # build the type of features

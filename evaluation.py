@@ -1,12 +1,10 @@
 import csv
 import itertools
-from datetime import datetime
-import xlwt
-from collections import defaultdict
 import logging
 import time
 import os
 from copy import copy
+import pandas as pd
 
 class Evaluate:
 
@@ -32,6 +30,7 @@ class Evaluate:
         self.data = None
         self.directory = os.path.join(directory, 'evaluations')
 
+
     def update_inference_mode(self, inference_mode):
 
         """
@@ -43,15 +42,18 @@ class Evaluate:
         if self.inference_mode == 'train':
             self.gold_tree = self.model.gold_tree[inference_mode]
             self.token_POS_dict = self.model.token_POS_dict[inference_mode]
+            self.data = copy(self.model.train_data)
             print('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
             logging.info('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
         elif self.inference_mode == 'test':
             self.gold_tree = self.model.gold_tree[inference_mode]
             self.token_POS_dict = self.model.token_POS_dict[inference_mode]
+            self.data = copy(self.model.test_data)
             print('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
             logging.info('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
         else:
             self.gold_tree = self.model.gold_tree[inference_mode]
+            self.data = copy(self.model.comp_data)
             print('{}: Evaluation updated to comp mode'.format(time.asctime(time.localtime(time.time()))))
             logging.info('{}: Evaluation updated to comp mode'.format(time.asctime(time.localtime(time.time()))))
         # change perceptron to train/test mode, should influence it's gold tree to be train/test gold tree,
@@ -85,22 +87,28 @@ class Evaluate:
         for t in range(len(self.gold_tree)):
             sentence_mistake_num = 0
             gold_sentence = self.gold_tree[t]
-            pred_tree = self.inference_obj.calculate_mst(t)
-            for source, targets in gold_sentence.items():
-                missed_targets = set(targets).difference(set(pred_tree[source]))
-                wrong_targets = set(pred_tree[source]).difference(set(targets))
-                data_mistake_num += len(missed_targets)
-                sentence_mistake_num += len(missed_targets)
-                if t not in mistakes_dict.keys():
-                    mistakes_dict[t] = dict()
-                    mistakes_dict[t][source] = dict()
-                    mistakes_dict[t][source]['missed_targets'] = missed_targets
-                    mistakes_dict[t][source]['wrong_targets'] = wrong_targets
-                else:
-                    mistakes_dict[t][source] = dict()
-                    mistakes_dict[t][source]['missed_targets'] = missed_targets
-                    mistakes_dict[t][source]['wrong_targets'] = wrong_targets
-            sentences_count += 1
+            try:
+                pred_tree = self.inference_obj.calculate_mst(t)
+            except AssertionError as err:
+                pred_tree = err.args
+                print("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
+                logging.error("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
+            finally:
+                for source, targets in gold_sentence.items():
+                    missed_targets = set(targets).difference(set(pred_tree[source]))
+                    wrong_targets = set(pred_tree[source]).difference(set(targets))
+                    data_mistake_num += len(missed_targets)
+                    sentence_mistake_num += len(missed_targets)
+                    if t not in mistakes_dict.keys():
+                        mistakes_dict[t] = dict()
+                        mistakes_dict[t][source] = dict()
+                        mistakes_dict[t][source]['missed_targets'] = missed_targets
+                        mistakes_dict[t][source]['wrong_targets'] = wrong_targets
+                    else:
+                        mistakes_dict[t][source] = dict()
+                        mistakes_dict[t][source]['missed_targets'] = missed_targets
+                        mistakes_dict[t][source]['wrong_targets'] = wrong_targets
+                sentences_count += 1
         accuracy = 1 - data_mistake_num / (data_num_tokens - sentences_count)
         # todo: Rom changed format
         logging.info('{}: Accuracy for {} is : {:%} '.format(time.asctime(time.localtime(time.time())),
@@ -120,30 +128,56 @@ class Evaluate:
 
         return accuracy, mistakes_dict_name
 
-    def infer(self, comp_file_name, inference_mode=None):
+    def reverse_dict(self, pred_tree):
+        """
+        :param pred_tree: the prediction tree returned from calculate mst
+        :return: the reverse tree where the key is the target and the value is the head
+        """
+
+        pred_tree_reverse = {}
+        for head, targets in pred_tree:
+            for target in targets:
+                pred_tree_reverse[target] = head
+
+        return pred_tree_reverse
+
+    def infer(self, inference_mode=None):
 
         """
         this method uses the inference object in order to create the predictions file
-        :param comp_file_name: if evaluation class is for inference on competition data
         :param inference_mode: for updates the class variables to the correct work mode
         """
 
         # change relevant class variables
         self.update_inference_mode(inference_mode)
-        for sentence_index in range(len(self.gold_tree)):
+        #for sentence_index in range(len(self.gold_tree)):
+        #sentence_index = len(self.gold_tree)
+        sentence_index = -1
+        pred_tree = dict()
+        pred_tree_reverse = dict()
         for index, row in self.data.iterrows():
             if row['token_counter'] == 1:
-                pred_tree = self.inference_obj.calculate_mst(sentence_index)
+                sentence_index += 1
+                try:
+                    pred_tree = self.inference_obj.calculate_mst(sentence_index)
+                except AssertionError as err:
+                    pred_tree = err.args
+                    print("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
+                    logging.error("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
+                finally:
+                    pred_tree_reverse = self.reverse_dict(pred_tree)
+            row['token_head'] = pred_tree_reverse[row['token_counter']]
 
+        # delete additional column for comp format
+        if inference_mode == 'comp':
+            self.data = self.data.drop('sentence_index',1)
 
+        # save to file
+        saved_file_name = 'inference file for mode:{} - {}'.format(inference_mode,
+                          time.asctime(time.localtime(time.time())))
+        self.data.to_csv(saved_file_name,sep='\t', header=False)
 
-        return
-
-
-
-
-
-
+        return saved_file_name
 
 
 # class Evaluate:
@@ -334,171 +368,7 @@ class Evaluate:
 #
 #     def create_confusion_sheet(self, book, tag_list, confusion_matrix_to_write, sheet_name):
 #         """
-#         this method creates a new confusion matrix sheet by the name sheet_name
-#         :param sheet_name:
-#         :param book: the excel workbook object
-#         :param tag_list: list of all the tags
-#         :param confusion_matrix_to_write:
-#         :return: None
-#         """
-#         sheet1 = book.add_sheet(sheet_name)
-#
-#         # Header pattern
-#         header_pattern = xlwt.Pattern()
-#         header_pattern.pattern = xlwt.Pattern.SOLID_PATTERN
-#         header_pattern.pattern_fore_colour = 9
-#         bold_font = xlwt.Font()
-#         bold_font.bold = True
-#         align = xlwt.Alignment()
-#         align.horz = xlwt.Alignment.HORZ_CENTER
-#         thick_border = xlwt.Borders()
-#         thick_border.right = xlwt.Borders.THICK
-#         thick_border.left = xlwt.Borders.THICK
-#         thick_border.top = xlwt.Borders.THICK
-#         thick_border.bottom = xlwt.Borders.THICK
-#         header_style = xlwt.XFStyle()
-#         header_style.pattern = header_pattern
-#         header_style.borders = thick_border
-#         header_style.font = bold_font
-#         header_style.alignment = align
-#
-#         # Regualr pattern
-#         reg_border = xlwt.Borders()
-#         reg_border.right = xlwt.Borders.DASHED
-#         reg_border.left = xlwt.Borders.DASHED
-#         reg_border.top = xlwt.Borders.DASHED
-#         reg_border.bottom = xlwt.Borders.DASHED
-#         style = xlwt.XFStyle()
-#         style.borders = reg_border
-#         style.num_format_str = '0'
-#         style.alignment = align
-#
-#         # mistakes pattern
-#         pattern_mistake = xlwt.Pattern()
-#         pattern_mistake.pattern = xlwt.Pattern.SOLID_PATTERN
-#         pattern_mistake.pattern_fore_colour = 29
-#         style_mistake = xlwt.XFStyle()
-#         style_mistake.pattern = pattern_mistake
-#         style_mistake.num_format_str = '0'
-#         style_mistake.borders = reg_border
-#         style_mistake.alignment = align
-#
-#         # correct pattern
-#         pattern_hit = xlwt.Pattern()
-#         pattern_hit.pattern = xlwt.Pattern.SOLID_PATTERN
-#         pattern_hit.pattern_fore_colour = 42
-#         style_hit = xlwt.XFStyle()
-#         style_hit.pattern = pattern_hit
-#         style_hit.num_format_str = '0'
-#         style_hit.borders = reg_border
-#         style_hit.alignment = align
-#
-#         # sum pattern
-#         pattern_sum = xlwt.Pattern()
-#         pattern_sum.pattern = xlwt.Pattern.SOLID_PATTERN
-#         pattern_sum.pattern_fore_colour = 22
-#         style_sum = xlwt.XFStyle()
-#         style_sum.pattern = pattern_sum
-#         style_sum.num_format_str = '0'
-#         style_sum.borders = thick_border
-#         style_sum.font = bold_font
-#         style_sum.alignment = align
-#
-#         # FP pattern
-#         style_fp = xlwt.XFStyle()
-#         style_fp.pattern = pattern_sum
-#         style_fp.num_format_str = '0.00%'
-#         style_fp.borders = thick_border
-#         style_fp.font = bold_font
-#         style_fp.alignment = align
-#
-#         last_pos = len(tag_list) + 1
-#         sheet1.write(0, 0, ' ', header_style)
-#
-#         for idx_tag, cur_tag in enumerate(tag_list):
-#             sheet1.write(0, idx_tag + 1, cur_tag, header_style)
-#         sheet1.write(0, last_pos, 'Recall', header_style)
-#         sheet1.write(0, last_pos + 1, 'Total', header_style)
-#         col_count_hit = [0] * len(tag_list)
-#         col_count_miss = [0] * len(tag_list)
-#         for row_tag_idx, row_tag in enumerate(tag_list):
-#             row_count_hit = 0
-#             row_count_miss = 0
-#             sheet1.write(row_tag_idx + 1, 0, row_tag, header_style)
-#             for col_tag_idx, col_tag in enumerate(tag_list):
-#                 cur_value = confusion_matrix_to_write["{0}_{1}".format(row_tag, col_tag)]
-#                 if cur_value == 0:
-#                     sheet1.write(row_tag_idx + 1, col_tag_idx + 1, cur_value, style)
-#                 else:
-#                     if row_tag_idx == col_tag_idx:
-#                         sheet1.write(row_tag_idx + 1, col_tag_idx + 1, cur_value, style_hit)
-#                         row_count_hit += cur_value
-#                         col_count_hit[col_tag_idx] += cur_value
-#                     else:
-#                         sheet1.write(row_tag_idx + 1, col_tag_idx + 1, cur_value, style_mistake)
-#                         row_count_miss += cur_value
-#                         col_count_miss[col_tag_idx] += cur_value
-#             row_count = row_count_hit + row_count_miss
-#             if row_count == 0:
-#                 sheet1.write(row_tag_idx + 1, last_pos, row_count, style_fp)  # recall
-#             else:
-#                 sheet1.write(row_tag_idx + 1, last_pos, row_count_hit / row_count, style_fp)  # recall
-#             sheet1.write(row_tag_idx + 1, last_pos + 1, row_count, style_sum)  # total
-#         sheet1.write(last_pos, 0, 'Precision', header_style)
-#         sheet1.write(last_pos + 1, 0, 'Total', header_style)
-#         total_count = 0
-#         total_hit = 0
-#         for col_idx, col_hit in enumerate(col_count_hit):
-#             col_count = col_hit + col_count_miss[col_idx]
-#             if col_count == 0:
-#                 sheet1.write(last_pos, col_idx + 1, col_count, style_fp)  # recall
-#             else:
-#                 sheet1.write(last_pos, col_idx + 1, col_hit / col_count, style_fp)  # recall
-#             total_count += col_count
-#             total_hit += col_hit
-#             sheet1.write(last_pos + 1, col_idx + 1, col_count, style_sum)
-#         sheet1.write(last_pos, last_pos, total_hit / total_count, style_fp)
-#         sheet1.write(last_pos, last_pos + 1, ':Accuracy', style)
-#         return
-#
-#     def get_most_missed_tags(self):
-#         top_tags_list = sorted(self.misses_matrix.items(), key=lambda x: x[1], reverse=True)[:self.k]
-#         tag_set = set()
-#         top_k_confusion_matrix = {}
-#         tags_keys = set()
-#         for key, val in top_tags_list:
-#             self.most_misses_tags.update({key: val})
-#             gold, predict = key.split('_')
-#             tag_set.update((gold, predict))
-#         tag_set = sorted(tag_set)
-#         # todo: check whether we can cut the loops
-#         for i in range(len(tag_set)):
-#             for j in range(i, len(tag_set)):
-#                 keys = self.get_all_possible_tags(tag_set[i], tag_set[j])
-#                 tags_keys.update(keys)
-#         for key in tags_keys:
-#             value = self.confusion_matrix.get(key, 0)
-#             top_k_confusion_matrix.update({key: value})
-#         return tag_set, top_k_confusion_matrix
-#
-#     def get_all_possible_tags(self, gold, predict):
-#         """
-#         this method generates all possible combination of a given two tags gold and predict
-#         :param gold: first tag
-#         :param predict: second tag
-#         :return:  a set of tags
-#         """
-#         keys = []
-#         for tag_1, tag_2 in itertools.product([gold, predict], repeat=2):
-#             keys.append("{}_{}".format(tag_1, tag_2))
-#         return keys
-#
-#     def add_missing_tags(self, gold_tag, predict_tag):
-#         res = self.get_all_possible_tags(gold_tag, predict_tag)
-#         for confusion_matrix_key in res:
-#             self.confusion_matrix.setdefault(confusion_matrix_key, 0)
-#             self.misses_matrix.setdefault(confusion_matrix_key, 0)
-#         return
+
 #
 #     def create_summary_file(self, lamda, model_features, test_file, train_file,
 #                             summary_file_name, weight_file_name, comp):
