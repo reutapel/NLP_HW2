@@ -6,7 +6,7 @@ from collections import defaultdict
 import logging
 import time
 import os
-
+from copy import copy
 
 class Evaluate:
 
@@ -29,7 +29,9 @@ class Evaluate:
         self.gold_tree = None
         self.token_POS_dict = None
         self.inference_mode = None
+        self.data = None
         self.directory = os.path.join(directory, 'evaluations')
+
 
     def update_inference_mode(self, inference_mode):
 
@@ -42,22 +44,29 @@ class Evaluate:
         if self.inference_mode == 'train':
             self.gold_tree = self.model.train_gold_tree
             self.token_POS_dict = self.model.train_token_POS_dict
+            self.data = copy(self.model.train_data)
             print('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
             logging.info('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
         elif self.inference_mode == 'test':
             self.gold_tree = self.model.test_gold_tree
             self.token_POS_dict = self.model.test_token_POS_dict
+            self.data = copy(self.model.test_data)
             print('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
             logging.info('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
         else:
             self.gold_tree = self.model.comp_gold_tree
+            self.data = copy(self.model.comp_data)
             print('{}: Evaluation updated to comp mode'.format(time.asctime(time.localtime(time.time()))))
             logging.info('{}: Evaluation updated to comp mode'.format(time.asctime(time.localtime(time.time()))))
+        # change perceptron to train/test mode, should influence it's gold tree to be train/test gold tree,
+        # and function edge score to train/test mode.
+        self.inference_obj.inference_mode(self.inference_mode)
         return
 
     def calculate_accuracy(self, inference_mode=None):
 
         """
+        this method calculates the accuracy of the prediction according to the gold tree on /train test
         :param inference_mode: for updates the class variables to the correct work mode
         :return:
         """
@@ -69,10 +78,6 @@ class Evaluate:
 
         # change relevant class variables
         self.update_inference_mode(inference_mode)
-
-        # change perceptron to train/test mode, should influence it's gold tree to be train/test gold tree,
-        # and function edge score to train/test mode.
-        self.inference_obj.inference_mode(self.inference_mode)
 
         data_mistake_num = 0
         data_num_tokens = len(self.token_POS_dict['token'].keys())
@@ -122,16 +127,19 @@ class Evaluate:
     def infer(self, comp_file_name, inference_mode=None):
 
         """
+        this method uses the inference object in order to create the predictions file
         :param comp_file_name: if evaluation class is for inference on competition data
         :param inference_mode: for updates the class variables to the correct work mode
         """
 
         # change relevant class variables
         self.update_inference_mode(inference_mode)
+        for sentence_index in range(len(self.gold_tree)):
+        for index, row in self.data.iterrows():
+            if row['token_counter'] == 1:
+                pred_tree = self.inference_obj.calculate_mst(sentence_index)
 
-        # change perceptron to comp mode in order to only calculate mst, using comp gold tree and edge score comp
-        self.inference_obj.inference_mode(inference_mode)
-        comp_file_name = comp_file_name
+
 
         return
 
