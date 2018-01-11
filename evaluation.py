@@ -91,8 +91,8 @@ class Evaluate:
                 pred_tree = self.inference_obj.calculate_mst(t)
             except AssertionError as err:
                 pred_tree = err.args
-                print("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
-                logging.error("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
+                print("The algorithm returned a bad tree, continuing with accuracy. \n tree: {}".format(pred_tree))
+                logging.error("The algorithm returned a bad tree, continuing with accuracy. \n tree: {}".format(pred_tree))
             finally:
                 for source, targets in gold_sentence.items():
                     missed_targets = set(targets).difference(set(pred_tree[source]))
@@ -110,7 +110,8 @@ class Evaluate:
                         mistakes_dict[t][source]['wrong_targets'] = wrong_targets
                 sentences_count += 1
         accuracy = 1 - data_mistake_num / (data_num_tokens - sentences_count)
-        # todo: Rom changed format
+
+        self.analyzer(mistakes_dict, inference_mode)
         logging.info('{}: Accuracy for {} is : {:%} '.format(time.asctime(time.localtime(time.time())),
                                                              self.inference_mode, accuracy))
         print('{}: accuracy for {} is: {:%} '.format(time.asctime(time.localtime(time.time())), self.inference_mode,
@@ -140,7 +141,7 @@ class Evaluate:
                 pred_tree_reverse[target] = head
 
         return pred_tree_reverse
-
+# TODO: test function
     def infer(self, inference_mode=None):
 
         """
@@ -162,8 +163,8 @@ class Evaluate:
                     pred_tree = self.inference_obj.calculate_mst(sentence_index)
                 except AssertionError as err:
                     pred_tree = err.args
-                    print("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
-                    logging.error("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
+                    print("The algorithm returned a bad tree, continuing with inference. \n tree: {}".format(pred_tree))
+                    logging.error("The algorithm returned a bad tree, continuing with inference. \n tree: {}".format(pred_tree))
                 finally:
                     pred_tree_reverse = self.reverse_dict(pred_tree)
             row['token_head'] = pred_tree_reverse[row['token_counter']]
@@ -178,6 +179,59 @@ class Evaluate:
         self.data.to_csv(saved_file_name,sep='\t', header=False)
 
         return saved_file_name
+#TODO: test function & save in matrix confusion mode and not in dict mode
+    def analyzer(self, mistakes_dict, inference_mode):
+        """
+        this method analyzes the mistakes of the prediction
+        :param mistakes_dict: the dict that contains the missed and wrong predictions
+        :inference_mode: mode of analysis
+        :return: all the analysis
+        """
+
+        # reversing dict for easier analysis
+        print('{}: starting analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: starting analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
+        analysis_dict = dict()
+        for t in mistakes_dict.keys():
+            analysis_dict[t] = dict()
+            for source, mis_dict in mistakes_dict[t].items():
+                analysis_dict[t]['wrong_targets'] = dict()
+                wrong_targets = mis_dict['wrong_targets']
+                for wrong_target in wrong_targets:
+                    analysis_dict[t]['wrong_targets'][wrong_target] = source
+                analysis_dict[t]['missed_targets'] = dict()
+                missed_targets = mis_dict['missed_targets']
+                for missed_target in missed_targets:
+                    analysis_dict[t]['missed_targets'][missed_target] = source
+
+        # now build a dict for confusion matrix of POS: key is (missed source, missed target) value is count
+        confusion_POS = dict()
+        for t, missed_dict in analysis_dict.items():
+            for missed_target in mis_dict['missed_targets']:
+                missed_source = mis_dict['missed_targets'][missed_target]
+                wrong_source = mis_dict['wrong_targets'][missed_target]
+                if (self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
+                    self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source]) in confusion_POS.keys():
+                    confusion_POS[self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
+                              self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source]] +=1
+                else:
+                    confusion_POS[self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
+                              self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source]] = 1
+
+        print('{}: finished analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: finished analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
+
+        print('{}: saving confusion_POS'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: saving confusion_POS'.format(time.asctime(time.localtime(time.time()))))
+        confusion_POS_name = 'confusion_POS_{}_{}'.format(inference_mode,
+                                                             time.asctime(time.localtime(time.time())))
+        w = csv.writer(open(os.path.join(self.directory, "{}.csv".format(confusion_POS_name), "w")))
+        for key, val in confusion_POS.items():
+            w.writerow([key, val])
+        print('{}: finished saving confusion_POS'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: finished saving confusion_POS'.format(time.asctime(time.localtime(time.time()))))
+
+        return confusion_POS
 
 
 # class Evaluate:
