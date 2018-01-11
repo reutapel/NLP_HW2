@@ -111,7 +111,7 @@ class Evaluate:
                 sentences_count += 1
         accuracy = 1 - data_mistake_num / (data_num_tokens - sentences_count)
 
-        self.analyzer(mistakes_dict, inference_mode)
+        self.analyzer(mistakes_dict, inference_mode, accuracy)
         logging.info('{}: Accuracy for {} is : {:%} '.format(time.asctime(time.localtime(time.time())),
                                                              self.inference_mode, accuracy))
         print('{}: accuracy for {} is: {:%} '.format(time.asctime(time.localtime(time.time())), self.inference_mode,
@@ -119,9 +119,8 @@ class Evaluate:
 
         print('{}: saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
-        mistakes_dict_name = 'accuracy_{}_mistakes_dict_{}_{}'.format(accuracy, self.inference_mode,
-                                                             time.asctime(time.localtime(time.time())))
-        w = csv.writer(open(os.path.join(self.directory, "{}.csv".format(mistakes_dict_name), "w")))
+        mistakes_dict_name = 'accuracy_{}_mistakes_dict_{}'.format(accuracy, self.inference_mode)
+        w = csv.writer(open(os.path.join(self.directory, "{}.csv".format(mistakes_dict_name)), "w"))
         for key, val in mistakes_dict.items():
             w.writerow([key, val])
         print('{}: finished saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
@@ -180,7 +179,7 @@ class Evaluate:
 
         return saved_file_name
 #TODO: test function & save in matrix confusion mode and not in dict mode
-    def analyzer(self, mistakes_dict, inference_mode):
+    def analyzer(self, mistakes_dict, inference_mode, accuracy):
         """
         this method analyzes the mistakes of the prediction
         :param mistakes_dict: the dict that contains the missed and wrong predictions
@@ -212,20 +211,19 @@ class Evaluate:
                 wrong_source = mis_dict['wrong_targets'][missed_target]
                 if (self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
                     self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source]) in confusion_POS.keys():
-                    confusion_POS[self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
-                              self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source]] +=1
+                    confusion_POS[(self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
+                              self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source])] +=1
                 else:
-                    confusion_POS[self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
-                              self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source]] = 1
+                    confusion_POS[(self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
+                              self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source])] = 1
 
         print('{}: finished analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: finished analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
 
         print('{}: saving confusion_POS'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: saving confusion_POS'.format(time.asctime(time.localtime(time.time()))))
-        confusion_POS_name = 'confusion_POS_{}_{}'.format(inference_mode,
-                                                             time.asctime(time.localtime(time.time())))
-        w = csv.writer(open(os.path.join(self.directory, "{}.csv".format(confusion_POS_name), "w")))
+        confusion_POS_name = 'confusion_POS_{}_acc_{}'.format(inference_mode,accuracy)
+        w = csv.writer(open(os.path.join(self.directory, "{}.csv".format(confusion_POS_name)),"w"))
         for key, val in confusion_POS.items():
             w.writerow([key, val])
         print('{}: finished saving confusion_POS'.format(time.asctime(time.localtime(time.time()))))
