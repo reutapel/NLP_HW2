@@ -117,6 +117,11 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
                      .format(time.asctime(time.localtime(time.time())), num_of_iter, test_file_to_use,
                              train_file_to_use, test_type, features_combination_list, accuracy, mistakes_dict_name))
 
+        if test_type == 'comp':
+            inference_file_name = evaluate_obj.infer(test_type)
+            print('{}: The inferred file name is: {}'.format(time.asctime(time.localtime(time.time())), inference_file_name))
+            logging.info('{}: The inferred file name is: {}'.format(time.asctime(time.localtime(time.time())), inference_file_name))
+
         # if not comp:
         #     word_results_dictionary = evaluate_class.run()
         # if comp:
@@ -161,7 +166,7 @@ if __name__ == "__main__":
         basic_features.remove('11')
         basic_features.remove('12')
         feature_type_dict = {
-            # 'all_features': [advanced_features],
+            'all_features': [advanced_features],
             'basic_model': [basic_features]}
 
         num_of_iter_list = [20, 50, 80, 100]
