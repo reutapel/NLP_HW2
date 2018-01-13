@@ -79,8 +79,9 @@ class StructPerceptron:
             print('{}: Starting Iteration #{}'.format(time.asctime(time.localtime(time.time())), i + 1))
             logging.info('{}: Starting Iteration #{}'.format(time.asctime(time.localtime(time.time())), i + 1))
             for t in range(len(self.gold_tree)):
-                print('{}: Working on sentence #{}'.format(time.asctime(time.localtime(time.time())), t + 1))
-                logging.info('{}: Working on sentence #{}'.format(time.asctime(time.localtime(time.time())), t + 1))
+                if t % 100 == 0:
+                    print('{}: Working on sentence #{}'.format(time.asctime(time.localtime(time.time())), t + 1))
+                    logging.info('{}: Working on sentence #{}'.format(time.asctime(time.localtime(time.time())), t + 1))
                 self.current_sentence = t
                 try:
                     pred_tree = self.calculate_mst(t)
