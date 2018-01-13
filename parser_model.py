@@ -457,7 +457,6 @@ class ParserModel:
                                                 c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None):
         """
         This method create a feature vector per feature number for a given edge and a given feature number
-        :param indexes_vector: the indexes_vector that we are calculating for the edge
         :param feature_number: the number of the feature we working on
         :param p_word: the word of the parent
         :param p_pos: the POS of the parent

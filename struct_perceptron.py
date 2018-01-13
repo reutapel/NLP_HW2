@@ -113,20 +113,23 @@ class StructPerceptron:
         :rtype: dict[int, List[int]]
         :raise AssertionError: with argument of the defected predicated tree
         """
-        print('{}: Start calculating mst for sentence #{}, on {} mode'
-              .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
-        logging.info('{}: Start calculating mst for sentence #{}, on {} mode'
-                     .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
+
+        if t % 100 == 0:
+            print('{}: Start calculating mst for sentence #{}, on {} mode'
+                  .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
+            logging.info('{}: Start calculating mst for sentence #{}, on {} mode'
+                         .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
         if self.current_sentence != t:
             self.current_sentence = t
         pred_tree = self.full_graph.get(t)
         digraph = Digraph(pred_tree, get_score=self.edge_score)
         new_graph = digraph.mst()
         pred_tree = new_graph.successors
-        print('{}: Finished calculating mst for sentence #{}, on {} mode'
-              .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
-        logging.info('{}: Finished calculating mst for sentence #{}, on {} mode'
-                     .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
+        if t % 100 == 0:
+            print('{}: Finished calculating mst for sentence #{}, on {} mode'
+                  .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
+            logging.info('{}: Finished calculating mst for sentence #{}, on {} mode'
+                         .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
         assert self.check_valid_tree(pred_tree, t), pred_tree
         return pred_tree
 

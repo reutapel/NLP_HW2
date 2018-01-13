@@ -166,7 +166,7 @@ if __name__ == "__main__":
         basic_features.remove('11')
         basic_features.remove('12')
         feature_type_dict = {
-            'all_features': [advanced_features],
+            # 'all_features': [advanced_features],
             'basic_model': [basic_features]}
 
         num_of_iter_list = [20, 50, 80, 100]

@@ -6,6 +6,7 @@ import os
 from copy import copy
 import pandas as pd
 
+
 class Evaluate:
 
     """
@@ -140,6 +141,7 @@ class Evaluate:
 
         return pred_tree_reverse
 # TODO: test function
+
     def infer(self, inference_mode=None):
 
         """
@@ -178,6 +180,7 @@ class Evaluate:
 
         return saved_file_name
 #TODO: test function & save in matrix confusion mode and not in dict mode
+
     def analyzer(self, mistakes_dict, inference_mode, accuracy):
         """
         this method analyzes the mistakes of the prediction
