@@ -131,9 +131,9 @@ class Evaluate:
         # change relevant class variables
         self.update_inference_mode(inference_mode)
         for sentence_index in range(len(self.gold_tree)):
-        for index, row in self.data.iterrows():
-            if row['token_counter'] == 1:
-                pred_tree = self.inference_obj.calculate_mst(sentence_index)
+            for index, row in self.data.iterrows():
+                if row['token_counter'] == 1:
+                    pred_tree = self.inference_obj.calculate_mst(sentence_index)
 
 
 

@@ -422,9 +422,9 @@ class ParserModel:
                          .format(time.asctime(time.localtime(time.time())), feature_number, feature_description,
                                  feature_instances))
 
-        print('{}: Finished building features vector in : {}'.format(time.asctime(time.localtime(time.time())),
+        print('{}: Finished building features vector in : {} seconds'.format(time.asctime(time.localtime(time.time())),
               time.time() - start_time))
-        logging.info('{}: Finished building features vector in : {}'.format(time.asctime(time.localtime(time.time())),
+        logging.info('{}: Finished building features vector in : {} seconds'.format(time.asctime(time.localtime(time.time())),
                      time.time() - start_time))
 
         # Saving dictionaries to csv
@@ -446,6 +446,9 @@ class ParserModel:
         logging.info('{}: Finished saving features_vector_mapping'.format(time.asctime(time.localtime(time.time()))))
 
         self.feature_vec_len = features_vector_idx
+        print('{}: Feature vector len is: {}'.format(time.asctime(time.localtime(time.time())), self.feature_vec_len))
+        logging.info('{}: Feature vector len is: {}'.
+                     format(time.asctime(time.localtime(time.time())), self.feature_vec_len))
 
         return
 
@@ -612,18 +615,18 @@ class ParserModel:
         """
 
         start_time = time.time()
-        print('{}: Starting building feature vectors for gold trees {}'.
+        print('{}: Start building feature vectors for gold trees {}'.
               format(time.asctime(time.localtime(time.time())), mode))
-        logging.info('{}: Starting building feature vectors for gold trees {}'.
+        logging.info('{}: Start building feature vectors for gold trees {}'.
                      format(time.asctime(time.localtime(time.time())), mode))
 
         for sentence_index, sentence_tree in self.gold_tree[mode].items():
             self.gold_tree_features_vector[mode][sentence_index] =\
                 self.create_global_feature_vector(sentence_tree, sentence_index, mode)
 
-        print('{}: Finished building feature vectors for gold trees {} in : {}'.
+        print('{}: Finished building feature vectors for gold trees {} in : {} seconds'.
               format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
-        logging.info('{}: Finished building feature vectors for gold trees {} in : {}'.
+        logging.info('{}: Finished building feature vectors for gold trees {} in : {} seconds'.
                      format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
 
         print('{}: Saving feature vectors for gold trees {}'.format(time.asctime(time.localtime(time.time())), mode))
@@ -645,9 +648,9 @@ class ParserModel:
         """
 
         start_time = time.time()
-        print('{}: Starting building feature vectors for full graph {}'.
+        print('{}: Start building feature vectors for full graph {}'.
               format(time.asctime(time.localtime(time.time())), mode))
-        logging.info('{}: Starting building feature vectors for full graph {}'.
+        logging.info('{}: Start building feature vectors for full graph {}'.
                      format(time.asctime(time.localtime(time.time())), mode))
 
         # get full graphs for the mode
@@ -658,9 +661,9 @@ class ParserModel:
                     self.full_graph_features_vector[mode][sentence_index][(source, target)] =\
                         csr_matrix(self.get_local_feature_vec(sentence_index, source, target, mode))
 
-        print('{}: Finished building feature vectors for full graph {} in : {}'.
+        print('{}: Finished building feature vectors for full graph {} in : {} seconds'.
               format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
-        logging.info('{}: Finished building feature vectors for full graph {} in : {}'.
+        logging.info('{}: Finished building feature vectors for full graph {} in : {} seconds'.
                      format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
 
         print('{}: Saving feature vectors for full graph {}'.format(time.asctime(time.localtime(time.time())), mode))
