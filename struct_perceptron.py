@@ -63,7 +63,7 @@ class StructPerceptron:
         self.gold_tree = self.global_gold_tree[mode]
         print('{}: Start Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: Start Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
-        self.sets_of_nodes, self.full_graph = GraphUntil.create_full_graph(gold_tree=self.gold_tree)
+        self.sets_of_nodes, self.full_graph = GraphUtil.create_full_graph(gold_tree=self.gold_tree)
         print('{}: Finish Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: Finish Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
 
@@ -85,11 +85,11 @@ class StructPerceptron:
                 try:
                     pred_tree = self.calculate_mst(t)
                 except AssertionError as err:
-                    pred_tree = err.args
+                    pred_tree = err.args[0]    # type: dict[int,list[int]]
                     print("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
                     logging.error("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
                 else:
-                    if not GraphUntil.identical_dependency_tree(pred_tree, self.gold_tree[t]):
+                    if not GraphUtil.identical_dependency_tree(pred_tree, self.gold_tree[t]):
                         curr_feature_vec = self.features_vector_train[t]
                         new_feature_vec = self.model.create_global_feature_vector(pred_tree, t, mode=self._mode)
                         new_weight_vec = self.current_weight_vec + curr_feature_vec - new_feature_vec
@@ -152,8 +152,8 @@ class StructPerceptron:
         :return: True if the tree is valid
         :rtype: bool
         """
-        if self._mode != 'train' and len(pred_tree[self._ROOT]) != 1:
-            return False
+        # if self._mode != 'train' and len(pred_tree[self._ROOT]) != 1:
+        #     return False
         set_of_nodes = self.sets_of_nodes[t]
         for node in set_of_nodes:
             if sum(node in targets for targets in pred_tree.values()) != 1:
@@ -161,7 +161,7 @@ class StructPerceptron:
         return True
 
 
-class GraphUntil:
+class GraphUtil:
     _ROOT = 0
 
     @staticmethod
@@ -182,14 +182,14 @@ class GraphUntil:
             for source, targets in sentence.items():
                 set_of_nodes.add(source)
                 set_of_nodes = set_of_nodes.union(set(targets))
-            if GraphUntil._ROOT in set_of_nodes:
-                set_of_nodes.remove(GraphUntil._ROOT)
+            if GraphUtil._ROOT in set_of_nodes:
+                set_of_nodes.remove(GraphUtil._ROOT)
             sets_of_nodes.update({idx: set_of_nodes})
             graph = {}
             for node in set_of_nodes:
                 targets = list(set_of_nodes.difference({node}))
                 graph.update({node: targets})
-            graph.update({GraphUntil._ROOT: list(set_of_nodes)})
+            graph.update({GraphUtil._ROOT: list(set_of_nodes)})
             full_graph.update({idx: graph})
         return sets_of_nodes, full_graph
 

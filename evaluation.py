@@ -111,8 +111,9 @@ class Evaluate:
         print('{}: saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
         mistakes_dict_name = 'accuracy_{}_mistakes_dict_{}_{}'.format(accuracy, self.inference_mode,
-                                                             time.asctime(time.localtime(time.time())))
-        w = csv.writer(open(os.path.join(self.directory, "{}.csv".format(mistakes_dict_name), "w")))
+                                                                      time.asctime(time.localtime(time.time())).replace(
+                                                                          ' ', '_').replace(':', '_'))
+        w = csv.writer(open(os.path.join(self.directory, "{}.csv".format(mistakes_dict_name)), "w"))
         for key, val in mistakes_dict.items():
             w.writerow([key, val])
         print('{}: finished saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
@@ -131,9 +132,9 @@ class Evaluate:
         # change relevant class variables
         self.update_inference_mode(inference_mode)
         for sentence_index in range(len(self.gold_tree)):
-        for index, row in self.data.iterrows():
-            if row['token_counter'] == 1:
-                pred_tree = self.inference_obj.calculate_mst(sentence_index)
+            for index, row in self.data.iterrows():
+                if row['token_counter'] == 1:
+                    pred_tree = self.inference_obj.calculate_mst(sentence_index)
 
 
 
