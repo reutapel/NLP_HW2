@@ -6,6 +6,7 @@ import os
 from copy import copy
 import pandas as pd
 
+
 class Evaluate:
 
     """
@@ -30,7 +31,6 @@ class Evaluate:
         self.data = None
         self.directory = os.path.join(directory, 'evaluations')
 
-
     def update_inference_mode(self, inference_mode):
 
         """
@@ -46,12 +46,17 @@ class Evaluate:
             print('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
             logging.info('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
         elif self.inference_mode == 'test':
+            self.model.create_gold_tree_dictionary(inference_mode)
+            self.model.create_gold_tree_feature_vector(inference_mode)
+            self.model.create_full_feature_vector(inference_mode)
             self.gold_tree = self.model.gold_tree[inference_mode]
             self.token_POS_dict = self.model.token_POS_dict[inference_mode]
             self.data = copy(self.model.test_data)
             print('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
             logging.info('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
         else:
+            self.model.create_gold_tree_dictionary(inference_mode)
+            self.model.create_full_feature_vector(inference_mode)
             self.gold_tree = self.model.gold_tree[inference_mode]
             self.data = copy(self.model.comp_data)
             print('{}: Evaluation updated to comp mode'.format(time.asctime(time.localtime(time.time()))))
@@ -141,6 +146,7 @@ class Evaluate:
 
         return pred_tree_reverse
 # TODO: test function
+
     def infer(self, inference_mode=None):
 
         """
@@ -179,6 +185,7 @@ class Evaluate:
 
         return saved_file_name
 #TODO: test function & save in matrix confusion mode and not in dict mode
+
     def analyzer(self, mistakes_dict, inference_mode, accuracy):
         """
         this method analyzes the mistakes of the prediction
@@ -212,10 +219,10 @@ class Evaluate:
                 if (self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
                     self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source]) in confusion_POS.keys():
                     confusion_POS[(self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
-                              self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source])] +=1
+                                   self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source])] += 1
                 else:
                     confusion_POS[(self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
-                              self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source])] = 1
+                                   self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source])] = 1
 
         print('{}: finished analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: finished analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
@@ -420,7 +427,171 @@ class Evaluate:
 #
 #     def create_confusion_sheet(self, book, tag_list, confusion_matrix_to_write, sheet_name):
 #         """
-
+#         this method creates a new confusion matrix sheet by the name sheet_name
+#         :param sheet_name:
+#         :param book: the excel workbook object
+#         :param tag_list: list of all the tags
+#         :param confusion_matrix_to_write:
+#         :return: None
+#         """
+#         sheet1 = book.add_sheet(sheet_name)
+#
+#         # Header pattern
+#         header_pattern = xlwt.Pattern()
+#         header_pattern.pattern = xlwt.Pattern.SOLID_PATTERN
+#         header_pattern.pattern_fore_colour = 9
+#         bold_font = xlwt.Font()
+#         bold_font.bold = True
+#         align = xlwt.Alignment()
+#         align.horz = xlwt.Alignment.HORZ_CENTER
+#         thick_border = xlwt.Borders()
+#         thick_border.right = xlwt.Borders.THICK
+#         thick_border.left = xlwt.Borders.THICK
+#         thick_border.top = xlwt.Borders.THICK
+#         thick_border.bottom = xlwt.Borders.THICK
+#         header_style = xlwt.XFStyle()
+#         header_style.pattern = header_pattern
+#         header_style.borders = thick_border
+#         header_style.font = bold_font
+#         header_style.alignment = align
+#
+#         # Regualr pattern
+#         reg_border = xlwt.Borders()
+#         reg_border.right = xlwt.Borders.DASHED
+#         reg_border.left = xlwt.Borders.DASHED
+#         reg_border.top = xlwt.Borders.DASHED
+#         reg_border.bottom = xlwt.Borders.DASHED
+#         style = xlwt.XFStyle()
+#         style.borders = reg_border
+#         style.num_format_str = '0'
+#         style.alignment = align
+#
+#         # mistakes pattern
+#         pattern_mistake = xlwt.Pattern()
+#         pattern_mistake.pattern = xlwt.Pattern.SOLID_PATTERN
+#         pattern_mistake.pattern_fore_colour = 29
+#         style_mistake = xlwt.XFStyle()
+#         style_mistake.pattern = pattern_mistake
+#         style_mistake.num_format_str = '0'
+#         style_mistake.borders = reg_border
+#         style_mistake.alignment = align
+#
+#         # correct pattern
+#         pattern_hit = xlwt.Pattern()
+#         pattern_hit.pattern = xlwt.Pattern.SOLID_PATTERN
+#         pattern_hit.pattern_fore_colour = 42
+#         style_hit = xlwt.XFStyle()
+#         style_hit.pattern = pattern_hit
+#         style_hit.num_format_str = '0'
+#         style_hit.borders = reg_border
+#         style_hit.alignment = align
+#
+#         # sum pattern
+#         pattern_sum = xlwt.Pattern()
+#         pattern_sum.pattern = xlwt.Pattern.SOLID_PATTERN
+#         pattern_sum.pattern_fore_colour = 22
+#         style_sum = xlwt.XFStyle()
+#         style_sum.pattern = pattern_sum
+#         style_sum.num_format_str = '0'
+#         style_sum.borders = thick_border
+#         style_sum.font = bold_font
+#         style_sum.alignment = align
+#
+#         # FP pattern
+#         style_fp = xlwt.XFStyle()
+#         style_fp.pattern = pattern_sum
+#         style_fp.num_format_str = '0.00%'
+#         style_fp.borders = thick_border
+#         style_fp.font = bold_font
+#         style_fp.alignment = align
+#
+#         last_pos = len(tag_list) + 1
+#         sheet1.write(0, 0, ' ', header_style)
+#
+#         for idx_tag, cur_tag in enumerate(tag_list):
+#             sheet1.write(0, idx_tag + 1, cur_tag, header_style)
+#         sheet1.write(0, last_pos, 'Recall', header_style)
+#         sheet1.write(0, last_pos + 1, 'Total', header_style)
+#         col_count_hit = [0] * len(tag_list)
+#         col_count_miss = [0] * len(tag_list)
+#         for row_tag_idx, row_tag in enumerate(tag_list):
+#             row_count_hit = 0
+#             row_count_miss = 0
+#             sheet1.write(row_tag_idx + 1, 0, row_tag, header_style)
+#             for col_tag_idx, col_tag in enumerate(tag_list):
+#                 cur_value = confusion_matrix_to_write["{0}_{1}".format(row_tag, col_tag)]
+#                 if cur_value == 0:
+#                     sheet1.write(row_tag_idx + 1, col_tag_idx + 1, cur_value, style)
+#                 else:
+#                     if row_tag_idx == col_tag_idx:
+#                         sheet1.write(row_tag_idx + 1, col_tag_idx + 1, cur_value, style_hit)
+#                         row_count_hit += cur_value
+#                         col_count_hit[col_tag_idx] += cur_value
+#                     else:
+#                         sheet1.write(row_tag_idx + 1, col_tag_idx + 1, cur_value, style_mistake)
+#                         row_count_miss += cur_value
+#                         col_count_miss[col_tag_idx] += cur_value
+#             row_count = row_count_hit + row_count_miss
+#             if row_count == 0:
+#                 sheet1.write(row_tag_idx + 1, last_pos, row_count, style_fp)  # recall
+#             else:
+#                 sheet1.write(row_tag_idx + 1, last_pos, row_count_hit / row_count, style_fp)  # recall
+#             sheet1.write(row_tag_idx + 1, last_pos + 1, row_count, style_sum)  # total
+#         sheet1.write(last_pos, 0, 'Precision', header_style)
+#         sheet1.write(last_pos + 1, 0, 'Total', header_style)
+#         total_count = 0
+#         total_hit = 0
+#         for col_idx, col_hit in enumerate(col_count_hit):
+#             col_count = col_hit + col_count_miss[col_idx]
+#             if col_count == 0:
+#                 sheet1.write(last_pos, col_idx + 1, col_count, style_fp)  # recall
+#             else:
+#                 sheet1.write(last_pos, col_idx + 1, col_hit / col_count, style_fp)  # recall
+#             total_count += col_count
+#             total_hit += col_hit
+#             sheet1.write(last_pos + 1, col_idx + 1, col_count, style_sum)
+#         sheet1.write(last_pos, last_pos, total_hit / total_count, style_fp)
+#         sheet1.write(last_pos, last_pos + 1, ':Accuracy', style)
+#         return
+#
+#     def get_most_missed_tags(self):
+#         top_tags_list = sorted(self.misses_matrix.items(), key=lambda x: x[1], reverse=True)[:self.k]
+#         tag_set = set()
+#         top_k_confusion_matrix = {}
+#         tags_keys = set()
+#         for key, val in top_tags_list:
+#             self.most_misses_tags.update({key: val})
+#             gold, predict = key.split('_')
+#             tag_set.update((gold, predict))
+#         tag_set = sorted(tag_set)
+#         # todo: check whether we can cut the loops
+#         for i in range(len(tag_set)):
+#             for j in range(i, len(tag_set)):
+#                 keys = self.get_all_possible_tags(tag_set[i], tag_set[j])
+#                 tags_keys.update(keys)
+#         for key in tags_keys:
+#             value = self.confusion_matrix.get(key, 0)
+#             top_k_confusion_matrix.update({key: value})
+#         return tag_set, top_k_confusion_matrix
+#
+#     def get_all_possible_tags(self, gold, predict):
+#         """
+#         this method generates all possible combination of a given two tags gold and predict
+#         :param gold: first tag
+#         :param predict: second tag
+#         :return:  a set of tags
+#         """
+#         keys = []
+#         for tag_1, tag_2 in itertools.product([gold, predict], repeat=2):
+#             keys.append("{}_{}".format(tag_1, tag_2))
+#         return keys
+#
+#     def add_missing_tags(self, gold_tag, predict_tag):
+#         res = self.get_all_possible_tags(gold_tag, predict_tag)
+#         for confusion_matrix_key in res:
+#             self.confusion_matrix.setdefault(confusion_matrix_key, 0)
+#             self.misses_matrix.setdefault(confusion_matrix_key, 0)
+#         return
 #
 #     def create_summary_file(self, lamda, model_features, test_file, train_file,
 #                             summary_file_name, weight_file_name, comp):
