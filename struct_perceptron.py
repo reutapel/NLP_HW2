@@ -166,7 +166,7 @@ class StructPerceptron:
         for sentence_idx, edge in feature_vecs.items():
             self.scores[sentence_idx] = {}
             for key, feature_vec in edge.items():
-                self.scores[sentence_idx].update({key: feature_vec.dot(self.current_weight_vec_t).A[0][0]})
+                self.scores[sentence_idx].update({key: feature_vec.dot(self.current_weight_vec_t).data[0]})
 
     def check_valid_tree(self, pred_tree, t):
         """
