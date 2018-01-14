@@ -63,12 +63,12 @@ class ParserModel:
         self.test_data = self.test_data.assign(sentence_index=0)
         self.test_data = self.test_data.assign(head_word='')
         self.test_data = self.test_data.assign(head_POS='')
-        self.create_gold_tree_dictionary('test')
+        # self.create_gold_tree_dictionary('test')
 
         """create comp data and gold trees dict"""
         self.comp_data = pd.read_table(comp_file_name, header=None, names=self.file_columns_names)
         self.comp_data = self.comp_data.assign(sentence_index=0)
-        self.create_gold_tree_dictionary('comp')
+        # self.create_gold_tree_dictionary('comp')
 
         self.features_combination = features_combination
 
@@ -123,11 +123,11 @@ class ParserModel:
         self.build_features_vector()
         # build the feature vector for each tree gold of the train and the test data
         self.create_gold_tree_feature_vector('train')
-        self.create_gold_tree_feature_vector('test')
+        # self.create_gold_tree_feature_vector('test')
         # build the feature vectors for each full graph in test and train
         self.create_full_feature_vector('train')
-        self.create_full_feature_vector('test')
-        self.create_full_feature_vector('comp')
+        # self.create_full_feature_vector('test')
+        # self.create_full_feature_vector('comp')
 
     def define_features_dicts(self):
         """
