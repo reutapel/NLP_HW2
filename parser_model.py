@@ -110,7 +110,8 @@ class ParserModel:
         # feature vectors for the full graphs
         # The format is: {mode: {sentence_index: {(head, target): feature_vector}}}
         self.full_graph_features_vector = {'train': defaultdict(dict),
-                                           'test': defaultdict(dict)}
+                                           'test': defaultdict(dict),
+                                           'comp': defaultdict(dict)}
 
         # create object of the GraphUtils
         self.graph_utils = GraphUtil()
@@ -126,6 +127,7 @@ class ParserModel:
         # build the feature vectors for each full graph in test and train
         self.create_full_feature_vector('train')
         self.create_full_feature_vector('test')
+        self.create_full_feature_vector('comp')
 
     def define_features_dicts(self):
         """
@@ -201,15 +203,16 @@ class ParserModel:
                 else:
                     sentence_dict[row['token_head']] = [row['token_counter']]
 
-                # update the sentence_index in the relevant data dataframe
-                data.set_value(index, 'sentence_index', sentence_index)
-
             else:
                 if row['token_counter'] == 1:
                     # if this is comp: If this is the first word in the sentence - create the list
                     sentence_dict[0] = [row['token_counter']]
                 else:  # if this is not the first word- append it to the list
                     sentence_dict[0].append(row['token_counter'])
+
+            # update the sentence_index in the relevant data dataframe
+            data.set_value(index, 'sentence_index', sentence_index)
+
         # for the last sentence
         self.gold_tree[mode][sentence_index] = sentence_dict
         sentence_index += 1
@@ -422,9 +425,9 @@ class ParserModel:
                          .format(time.asctime(time.localtime(time.time())), feature_number, feature_description,
                                  feature_instances))
 
-        print('{}: Finished building features vector in : {}'.format(time.asctime(time.localtime(time.time())),
+        print('{}: Finished building features vector in : {} seconds'.format(time.asctime(time.localtime(time.time())),
               time.time() - start_time))
-        logging.info('{}: Finished building features vector in : {}'.format(time.asctime(time.localtime(time.time())),
+        logging.info('{}: Finished building features vector in : {} seconds'.format(time.asctime(time.localtime(time.time())),
                      time.time() - start_time))
 
         # Saving dictionaries to csv
@@ -446,6 +449,9 @@ class ParserModel:
         logging.info('{}: Finished saving features_vector_mapping'.format(time.asctime(time.localtime(time.time()))))
 
         self.feature_vec_len = features_vector_idx
+        print('{}: Feature vector len is: {}'.format(time.asctime(time.localtime(time.time())), self.feature_vec_len))
+        logging.info('{}: Feature vector len is: {}'.
+                     format(time.asctime(time.localtime(time.time())), self.feature_vec_len))
 
         return
 
@@ -454,7 +460,6 @@ class ParserModel:
                                                 c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None):
         """
         This method create a feature vector per feature number for a given edge and a given feature number
-        :param indexes_vector: the indexes_vector that we are calculating for the edge
         :param feature_number: the number of the feature we working on
         :param p_word: the word of the parent
         :param p_pos: the POS of the parent
@@ -612,18 +617,18 @@ class ParserModel:
         """
 
         start_time = time.time()
-        print('{}: Starting building feature vectors for gold trees {}'.
+        print('{}: Start building feature vectors for gold trees {}'.
               format(time.asctime(time.localtime(time.time())), mode))
-        logging.info('{}: Starting building feature vectors for gold trees {}'.
+        logging.info('{}: Start building feature vectors for gold trees {}'.
                      format(time.asctime(time.localtime(time.time())), mode))
 
         for sentence_index, sentence_tree in self.gold_tree[mode].items():
             self.gold_tree_features_vector[mode][sentence_index] =\
                 self.create_global_feature_vector(sentence_tree, sentence_index, mode)
 
-        print('{}: Finished building feature vectors for gold trees {} in : {}'.
+        print('{}: Finished building feature vectors for gold trees {} in : {} seconds'.
               format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
-        logging.info('{}: Finished building feature vectors for gold trees {} in : {}'.
+        logging.info('{}: Finished building feature vectors for gold trees {} in : {} seconds'.
                      format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
 
         print('{}: Saving feature vectors for gold trees {}'.format(time.asctime(time.localtime(time.time())), mode))
@@ -639,15 +644,15 @@ class ParserModel:
 
     def create_full_feature_vector(self, mode):
         """
-        create feature vectors for the full graph of each of the sentences in the train data
-        :param mode: the data type: train or test
+        create feature vectors for the full graph of each of the sentences in the mode data
+        :param mode: the data type: train, test or comp
         :return: no return, just save the dictionary with the feature vector for each sentence
         """
 
         start_time = time.time()
-        print('{}: Starting building feature vectors for full graph {}'.
+        print('{}: Start building feature vectors for full graph {}'.
               format(time.asctime(time.localtime(time.time())), mode))
-        logging.info('{}: Starting building feature vectors for full graph {}'.
+        logging.info('{}: Start building feature vectors for full graph {}'.
                      format(time.asctime(time.localtime(time.time())), mode))
 
         # get full graphs for the mode
@@ -658,9 +663,9 @@ class ParserModel:
                     self.full_graph_features_vector[mode][sentence_index][(source, target)] =\
                         csr_matrix(self.get_local_feature_vec(sentence_index, source, target, mode))
 
-        print('{}: Finished building feature vectors for full graph {} in : {}'.
+        print('{}: Finished building feature vectors for full graph {} in : {} seconds'.
               format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
-        logging.info('{}: Finished building feature vectors for full graph {} in : {}'.
+        logging.info('{}: Finished building feature vectors for full graph {} in : {} seconds'.
                      format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
 
         print('{}: Saving feature vectors for full graph {}'.format(time.asctime(time.localtime(time.time())), mode))
