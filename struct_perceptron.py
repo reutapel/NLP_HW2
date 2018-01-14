@@ -38,7 +38,9 @@ class StructPerceptron:
         self.weight_matrix = []
         self.current_weight_vec_iter = 0
         self.current_weight_vec = csr_matrix((1, self.feature_vec_len), dtype=int)
+        self.current_weight_vec_t = self.current_weight_vec.T
         self.current_sentence = 0
+        self.scores = {}
         # full graph contains a full graph + root per sentence {sentence_id: {parent_node: [child_nods]}}
         self.full_graph = {}
         self.sets_of_nodes = {}  # dict that contains set of nodes per sentence: {sentence_id: set_of_nodes}
@@ -52,6 +54,7 @@ class StructPerceptron:
         based on whether we use this class for train or test,
         this method sets the gold tree source and the mode of using the model functions,
         and than creates a new full_graph dictionary out of the relevant gold tree
+        if the mode of the class is not train, we need also to set the scores dict
 
         :param str mode: indicates class mode:
         * train mode ('train')
@@ -66,6 +69,9 @@ class StructPerceptron:
         self.sets_of_nodes, self.full_graph = GraphUtil.create_full_graph(gold_tree=self.gold_tree)
         print('{}: Finish Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: Finish Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
+        # if the mode is 'test' or 'comp' we need a new scores dict
+        if self._mode != 'train':
+            self.calculate_new_scores()
 
     def perceptron(self, num_of_iter):
         """
@@ -78,6 +84,7 @@ class StructPerceptron:
         for i in range(num_of_iter):
             print('{}: Starting Iteration #{}'.format(time.asctime(time.localtime(time.time())), i + 1))
             logging.info('{}: Starting Iteration #{}'.format(time.asctime(time.localtime(time.time())), i + 1))
+            self.calculate_new_scores()
             for t in range(len(self.gold_tree)):
                 if t % 100 == 0:
                     print('{}: Working on sentence #{}'.format(time.asctime(time.localtime(time.time())), t + 1))
@@ -90,6 +97,7 @@ class StructPerceptron:
                     new_weight_vec = self.current_weight_vec + curr_feature_vec - new_feature_vec
                     self.current_weight_vec_iter += 1
                     self.current_weight_vec = new_weight_vec
+                    self.current_weight_vec_t = new_weight_vec.T
                 # try:
                 #     pass
                 # except AssertionError as err:
@@ -138,15 +146,27 @@ class StructPerceptron:
     def edge_score(self, source, target):
         """
         this method return a score of likelihood , for a pair of source and target
-        s(source,target) = weight_vec * feature_vec(source, target)
+        s[sentence_index][(source,target)]
 
         :param source: a source node
         :param target: a target node
         :return: score value
         """
-        # type: csr_matrix
-        feature_vec = self.model.full_graph_features_vector[self._mode][self.current_sentence][(source, target)]
-        return self.current_weight_vec.dot(feature_vec.T).todense().item()
+        return self.scores[self.current_sentence][(source, target)]
+
+    def calculate_new_scores(self):
+        """
+        this method update self.scores dict with the scores of likelihood for each edge in each sentence
+
+        :cvar self.scores[sentence_index][(source, target)]: = feature_vec[sentence_index](source, target)*weight_vec^T
+        :return: None
+        """
+        self.scores = {}
+        feature_vecs = self.model.full_graph_features_vector[self._mode]
+        for sentence_idx, edge in feature_vecs.items():
+            self.scores[sentence_idx] = {}
+            for key, feature_vec in edge.items():
+                self.scores[sentence_idx].update({key: feature_vec.dot(self.current_weight_vec_t).A[0][0]})
 
     def check_valid_tree(self, pred_tree, t):
         """
