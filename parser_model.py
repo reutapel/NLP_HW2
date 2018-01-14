@@ -110,7 +110,8 @@ class ParserModel:
         # feature vectors for the full graphs
         # The format is: {mode: {sentence_index: {(head, target): feature_vector}}}
         self.full_graph_features_vector = {'train': defaultdict(dict),
-                                           'test': defaultdict(dict)}
+                                           'test': defaultdict(dict),
+                                           'comp': defaultdict(dict)}
 
         # create object of the GraphUtils
         self.graph_utils = GraphUtil()
@@ -126,6 +127,7 @@ class ParserModel:
         # build the feature vectors for each full graph in test and train
         self.create_full_feature_vector('train')
         self.create_full_feature_vector('test')
+        self.create_full_feature_vector('comp')
 
     def define_features_dicts(self):
         """
@@ -201,15 +203,16 @@ class ParserModel:
                 else:
                     sentence_dict[row['token_head']] = [row['token_counter']]
 
-                # update the sentence_index in the relevant data dataframe
-                data.set_value(index, 'sentence_index', sentence_index)
-
             else:
                 if row['token_counter'] == 1:
                     # if this is comp: If this is the first word in the sentence - create the list
                     sentence_dict[0] = [row['token_counter']]
                 else:  # if this is not the first word- append it to the list
                     sentence_dict[0].append(row['token_counter'])
+
+            # update the sentence_index in the relevant data dataframe
+            data.set_value(index, 'sentence_index', sentence_index)
+
         # for the last sentence
         self.gold_tree[mode][sentence_index] = sentence_dict
         sentence_index += 1
@@ -641,8 +644,8 @@ class ParserModel:
 
     def create_full_feature_vector(self, mode):
         """
-        create feature vectors for the full graph of each of the sentences in the train data
-        :param mode: the data type: train or test
+        create feature vectors for the full graph of each of the sentences in the mode data
+        :param mode: the data type: train, test or comp
         :return: no return, just save the dictionary with the feature vector for each sentence
         """
 

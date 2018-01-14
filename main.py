@@ -149,9 +149,9 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
-    train_file = os.path.join(base_directory, 'HW2-files', 'train.labeled')
-    test_file = os.path.join(base_directory, 'HW2-files', 'test.labeled')
-    comp_file = os.path.join(base_directory, 'HW2-files', 'comp.unlabeled')
+    train_file = os.path.join(base_directory, 'HW2-files', 'train_small.labeled')
+    test_file = os.path.join(base_directory, 'HW2-files', 'test_small.labeled')
+    comp_file = os.path.join(base_directory, 'HW2-files', 'comp_small.unlabeled')
     cv = False
     comp = False
     if cv:
