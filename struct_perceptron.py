@@ -83,24 +83,27 @@ class StructPerceptron:
                     print('{}: Working on sentence #{}'.format(time.asctime(time.localtime(time.time())), t + 1))
                     logging.info('{}: Working on sentence #{}'.format(time.asctime(time.localtime(time.time())), t + 1))
                 self.current_sentence = t
-                try:
-                    pred_tree = self.calculate_mst(t)
-                except AssertionError as err:
-                    pred_tree = err.args[0]    # type: dict[int,list[int]]
-                    print("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
-                    logging.error("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
-                else:
-                    if not GraphUtil.identical_dependency_tree(pred_tree, self.gold_tree[t]):
-                        curr_feature_vec = self.features_vector_train[t]
-                        new_feature_vec = self.model.create_global_feature_vector(pred_tree, t, mode=self._mode)
-                        new_weight_vec = self.current_weight_vec + curr_feature_vec - new_feature_vec
-                        self.weight_matrix.append(new_weight_vec)
-                        self.current_weight_vec_iter += 1
-                        self.current_weight_vec = new_weight_vec
+                pred_tree = self.calculate_mst(t)
+                if not GraphUtil.identical_dependency_tree(pred_tree, self.gold_tree[t]):
+                    curr_feature_vec = self.features_vector_train[t]
+                    new_feature_vec = self.model.create_global_feature_vector(pred_tree, t, mode=self._mode)
+                    new_weight_vec = self.current_weight_vec + curr_feature_vec - new_feature_vec
+                    self.current_weight_vec_iter += 1
+                    self.current_weight_vec = new_weight_vec
+                # try:
+                #     pass
+                # except AssertionError as err:
+                #     pred_tree = err.args[0]    # type: dict[int,list[int]]
+                #     print("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
+                #     logging.error("The algorithm returned a bad tree, update is skipped. \n tree: {}"
+                #                   .format(pred_tree))
+                # finally:
+        print("{}: the number of weight updates in this training:{}".format(time.asctime(time.localtime(time.time()))
+                                                                            , self.current_weight_vec_iter))
+        logging.info("{}: the number of weight updates in this training:{}"
+                     .format(time.asctime(time.localtime(time.time())), self.current_weight_vec_iter))
         with open(os.path.join(self.directory, 'final_weight_vec.pkl'), 'wb') as f:
             pickle.dump(self.current_weight_vec, f)
-        with open(os.path.join(self.directory, 'weights_matrix.pkl'), 'wb') as f:
-            pickle.dump(self.weight_matrix, f)
         return self.current_weight_vec
 
     def calculate_mst(self, t):
@@ -113,21 +116,23 @@ class StructPerceptron:
         :rtype: dict[int, List[int]]
         :raise AssertionError: with argument of the defected predicated tree
         """
-        print('{}: Start calculating mst for sentence #{}, on {} mode'
-              .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
-        logging.info('{}: Start calculating mst for sentence #{}, on {} mode'
-                     .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
+        if t % 100 == 0:
+            print('{}: Start calculating mst for sentence #{}, on {} mode'
+                  .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
+            logging.info('{}: Start calculating mst for sentence #{}, on {} mode'
+                         .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
         if self.current_sentence != t:
             self.current_sentence = t
         pred_tree = self.full_graph.get(t)
         digraph = Digraph(pred_tree, get_score=self.edge_score)
         new_graph = digraph.mst()
         pred_tree = new_graph.successors
-        print('{}: Finished calculating mst for sentence #{}, on {} mode'
-              .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
-        logging.info('{}: Finished calculating mst for sentence #{}, on {} mode'
-                     .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
-        assert self.check_valid_tree(pred_tree, t), pred_tree
+        if t % 100 == 0:
+            print('{}: Finished calculating mst for sentence #{}, on {} mode'
+                  .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
+            logging.info('{}: Finished calculating mst for sentence #{}, on {} mode'
+                         .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
+        # assert self.check_valid_tree(pred_tree, t), pred_tree
         return pred_tree
 
     def edge_score(self, source, target):
