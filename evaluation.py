@@ -46,12 +46,17 @@ class Evaluate:
             print('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
             logging.info('{}: Evaluation updated to train mode'.format(time.asctime(time.localtime(time.time()))))
         elif self.inference_mode == 'test':
+            self.model.create_gold_tree_dictionary(inference_mode)
+            self.model.create_gold_tree_feature_vector(inference_mode)
+            self.model.create_full_feature_vector(inference_mode)
             self.gold_tree = self.model.gold_tree[inference_mode]
             self.token_POS_dict = self.model.token_POS_dict[inference_mode]
             self.data = copy(self.model.test_data)
             print('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
             logging.info('{}: Evaluation updated to test mode'.format(time.asctime(time.localtime(time.time()))))
         else:
+            self.model.create_gold_tree_dictionary(inference_mode)
+            self.model.create_full_feature_vector(inference_mode)
             self.gold_tree = self.model.gold_tree[inference_mode]
             self.data = copy(self.model.comp_data)
             print('{}: Evaluation updated to comp mode'.format(time.asctime(time.localtime(time.time()))))
@@ -214,10 +219,10 @@ class Evaluate:
                 if (self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
                     self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source]) in confusion_POS.keys():
                     confusion_POS[(self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
-                              self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source])] +=1
+                                   self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source])] += 1
                 else:
                     confusion_POS[(self.token_POS_dict[inference_mode]['token_POS'][t, missed_source],
-                              self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source])] = 1
+                                   self.token_POS_dict[inference_mode]['token_POS'][t, wrong_source])] = 1
 
         print('{}: finished analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: finished analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
