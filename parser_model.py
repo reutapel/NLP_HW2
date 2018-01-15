@@ -457,9 +457,11 @@ class ParserModel:
 
     def calculate_local_feature_vec_per_feature(self, indexes_vector, feature_number, p_word=None, p_pos=None,
                                                 c_word=None, c_pos=None, p_pos_minus_1=None, p_pos_plus_1=None,
-                                                c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None):
+                                                c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None, is_full_graph=False):
         """
         This method create a feature vector per feature number for a given edge and a given feature number
+        :param indexes_vector: if is_full_graph is True - this is a list and we will insert the indexes of the features
+                            if is_full_graph is False - this is a numpy array that will be the features vector
         :param feature_number: the number of the feature we working on
         :param p_word: the word of the parent
         :param p_pos: the POS of the parent
@@ -470,6 +472,7 @@ class ParserModel:
         :param c_pos_minus_1: POS to the left of child in sentence
         :param c_pos_plus_1: POS to the right of child in sentence
         :param b_pos: POS of a word in between parent and child nodes.
+        :param is_full_graph: will be True if we build the full graph features vector
         :return: no return, the indexes_vector is updated
         """
         option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
@@ -485,21 +488,28 @@ class ParserModel:
 
             if feature_key in feature_dict:
                 feature_idx = self.features_vector[feature_key]
-                indexes_vector[feature_idx] = 1
+                if is_full_graph:
+                    indexes_vector.append(feature_idx)
+                else:
+                    indexes_vector[feature_idx] = 1
 
         return
 
-    def get_local_feature_vec(self, sentence_index, source, target, mode):
+    def get_local_feature_vec(self, sentence_index, source, target, mode, is_full_graph=False):
         """
         This method create a feature vector for a given edge
         :param sentence_index: the index of the sentence
         :param source: the token_counter of the parent
         :param target: the token_counter of the child
         :param mode: the data type: train or test or comp
+        :param is_full_graph: will be True if we build the full graph features vector
         :return: the vector feature of the given edge
         """
 
-        indexes_vector = np.zeros(shape=self.feature_vec_len, dtype=int)
+        if is_full_graph:  # if we build the full graph - we will build a list of indexes of the features
+            indexes_vector = list()
+        else:  # if we don't build the full graph - we will build a features vector
+            indexes_vector = np.zeros(shape=self.feature_vec_len, dtype=int)
 
         p_word = copy(self.token_POS_dict[mode]['token'][(sentence_index, source)])
         p_pos = copy(self.token_POS_dict[mode]['token_POS'][(sentence_index, source)])
@@ -544,48 +554,61 @@ class ParserModel:
             pos_between.append(copy(self.token_POS_dict[mode]['token_POS'][(sentence_index, index_between)]))
 
         # calculate feature_1 of p-word, p-pos
-        self.calculate_local_feature_vec_per_feature(indexes_vector, '1', p_word=p_word, p_pos=p_pos)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '1', p_word=p_word, p_pos=p_pos,
+                                                     is_full_graph=is_full_graph)
         # calculate feature_2 of p-word
-        self.calculate_local_feature_vec_per_feature(indexes_vector, '2', p_word=p_word)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '2', p_word=p_word, is_full_graph=is_full_graph)
         # calculate feature_3 of p_pos
-        self.calculate_local_feature_vec_per_feature(indexes_vector, '3', p_pos=p_pos)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '3', p_pos=p_pos, is_full_graph=is_full_graph)
         # calculate feature_4 of c-word, c-pos
-        self.calculate_local_feature_vec_per_feature(indexes_vector, '4', c_word=c_word, c_pos=c_pos)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '4', c_word=c_word, c_pos=c_pos,
+                                                     is_full_graph=is_full_graph)
         # calculate feature_5 of c-word
-        self.calculate_local_feature_vec_per_feature(indexes_vector, '5', c_word=c_word)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '5', c_word=c_word, is_full_graph=is_full_graph)
         # calculate feature_6 of c-pos
-        self.calculate_local_feature_vec_per_feature(indexes_vector, '6', c_pos=c_pos)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '6', c_pos=c_pos, is_full_graph=is_full_graph)
         # calculate feature_7 of p-word, p-pos, c-word, c-pos
-        self.calculate_local_feature_vec_per_feature(indexes_vector, '7', p_word=p_word, p_pos=p_pos, c_word=c_word, c_pos=c_pos)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '7', p_word=p_word, p_pos=p_pos, c_word=c_word,
+                                                     c_pos=c_pos, is_full_graph=is_full_graph)
         # calculate feature_8 of p-pos, c-word, c-pos
-        self.calculate_local_feature_vec_per_feature(indexes_vector, '8', p_pos=p_pos, c_word=c_word, c_pos=c_pos)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '8', p_pos=p_pos, c_word=c_word, c_pos=c_pos,
+                                                     is_full_graph=is_full_graph)
         # calculate feature_9 of p-word, c-word, c-pos
-        self.calculate_local_feature_vec_per_feature(indexes_vector, '9', p_word=p_word, c_word=c_word, c_pos=c_pos)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '9', p_word=p_word, c_word=c_word, c_pos=c_pos,
+                                                     is_full_graph=is_full_graph)
         # calculate feature_10 of p-word, p-pos, c-pos
-        self.calculate_local_feature_vec_per_feature(indexes_vector, '10', p_word=p_word, p_pos=p_pos, c_pos=c_pos)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '10', p_word=p_word, p_pos=p_pos, c_pos=c_pos,
+                                                     is_full_graph=is_full_graph)
         # calculate feature_11 of p-word, p-pos, c-word
-        self.calculate_local_feature_vec_per_feature(indexes_vector, '11', p_word=p_word, p_pos=p_pos, c_word=c_word)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '11', p_word=p_word, p_pos=p_pos, c_word=c_word,
+                                                     is_full_graph=is_full_graph)
         # calculate feature_11 of p-word, c-word
-        self.calculate_local_feature_vec_per_feature(indexes_vector, '12', p_word=p_word, c_word=c_word)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '12', p_word=p_word, c_word=c_word,
+                                                     is_full_graph=is_full_graph)
         # calculate feature_13 of p-pos, c-pos
-        self.calculate_local_feature_vec_per_feature(indexes_vector, '13', p_pos=p_pos, c_pos=c_pos)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '13', p_pos=p_pos, c_pos=c_pos,
+                                                     is_full_graph=is_full_graph)
         # calculate feature_14 of p-pos, p-pos+1, c-pos-1, c-pos
         self.calculate_local_feature_vec_per_feature(indexes_vector, '14', p_pos=p_pos, c_pos=c_pos,
-                                                     p_pos_plus_1=p_pos_plus_1, c_pos_minus_1=c_pos_minus_1)
+                                                     p_pos_plus_1=p_pos_plus_1, c_pos_minus_1=c_pos_minus_1,
+                                                     is_full_graph=is_full_graph)
         # calculate feature_15 of p-pos-1, p-pos, c-pos-1, c-pos
         self.calculate_local_feature_vec_per_feature(indexes_vector, '15', p_pos=p_pos, c_pos=c_pos,
-                                                     p_pos_minus_1=p_pos_minus_1, c_pos_minus_1=c_pos_minus_1)
+                                                     p_pos_minus_1=p_pos_minus_1, c_pos_minus_1=c_pos_minus_1,
+                                                     is_full_graph=is_full_graph)
         # calculate feature_16 of p-pos, p-pos+1, c-pos, c-pos+1
         self.calculate_local_feature_vec_per_feature(indexes_vector, '16', p_pos=p_pos, c_pos=c_pos,
-                                                     p_pos_plus_1=p_pos_plus_1, c_pos_plus_1=c_pos_plus_1)
+                                                     p_pos_plus_1=p_pos_plus_1, c_pos_plus_1=c_pos_plus_1,
+                                                     is_full_graph=is_full_graph)
         # calculate feature_17 of p-pos-1, p-pos, c-pos, c-pos+1
         self.calculate_local_feature_vec_per_feature(indexes_vector, '17', p_pos=p_pos, c_pos=c_pos,
-                                                     p_pos_minus_1=p_pos_minus_1, c_pos_plus_1=c_pos_plus_1)
+                                                     p_pos_minus_1=p_pos_minus_1, c_pos_plus_1=c_pos_plus_1,
+                                                     is_full_graph=is_full_graph)
         # calculate feature_18 of p-pos, b-pos, c-pos for all b-pos (POS of all words between parend and child)
         if pos_between:
             for b_pos in pos_between:
                 self.calculate_local_feature_vec_per_feature(indexes_vector, '18', p_pos=p_pos, c_pos=c_pos,
-                                                             b_pos=b_pos)
+                                                             b_pos=b_pos, is_full_graph=is_full_graph)
         return indexes_vector
 
     def create_global_feature_vector(self, tree, sentence_index, mode):
@@ -661,7 +684,7 @@ class ParserModel:
             for source, target_list in sentence_full_graph.items():
                 for target in target_list:
                     self.full_graph_features_vector[mode][sentence_index][(source, target)] =\
-                        csr_matrix(self.get_local_feature_vec(sentence_index, source, target, mode))
+                        self.get_local_feature_vec(sentence_index, source, target, mode, is_full_graph=True)
 
         print('{}: Finished building feature vectors for full graph {} in : {} seconds'.
               format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))

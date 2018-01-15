@@ -169,7 +169,7 @@ if __name__ == "__main__":
             # 'all_features': [advanced_features],
             'basic_model': [basic_features]}
 
-        num_of_iter_list = [50]  # [20, 50, 80, 100]
+        num_of_iter_list = [5]  # [20, 50, 80, 100]
         for num_of_iter in num_of_iter_list:
             start_time = time.time()
             if not comp:
