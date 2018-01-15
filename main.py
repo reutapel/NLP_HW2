@@ -11,11 +11,11 @@ from evaluation import Evaluate
 # open log connection
 sub_dirs = ["logs", "evaluations", "dict", "weights"]
 base_directory = os.path.abspath(os.curdir)
-directory = os.path.join(base_directory, "output", datetime.now().strftime("Basic_model_20_iters_%d_%m_%Y_%H_%M_%S"))
+directory = os.path.join(base_directory, "output", datetime.now().strftime("Basic_model_50_iters_%d_%m_%Y_%H_%M_%S"))
 for sub_dir in sub_dirs:
     os.makedirs(os.path.join(directory, sub_dir))
 directory += os.sep
-LOG_FILENAME = datetime.now().strftime(os.path.join(directory, 'logs', 'LogFile_basic_model_%d_%m_%Y_%H_%M.log'))
+LOG_FILENAME = datetime.now().strftime(os.path.join(directory, 'logs', 'LogFile_%d_%m_%Y_%H_%M.log'))
 logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
 
 
@@ -169,7 +169,7 @@ if __name__ == "__main__":
             # 'all_features': [advanced_features],
             'basic_model': [basic_features]}
 
-        num_of_iter_list = [20]  # [20, 50, 80, 100]
+        num_of_iter_list = [50]  # [20, 50, 80, 100]
         for num_of_iter in num_of_iter_list:
             start_time = time.time()
             if not comp:

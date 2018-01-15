@@ -5,6 +5,7 @@ import time
 from chu_liu import Digraph
 import pickle
 from scipy.sparse import csr_matrix
+from collections import defaultdict
 
 
 # TODO - Understand when should the perceptron stop updating weights
@@ -161,12 +162,12 @@ class StructPerceptron:
         :cvar self.scores[sentence_index][(source, target)]: = feature_vec[sentence_index](source, target)*weight_vec^T
         :return: None
         """
-        self.scores = {}
+        self.scores = defaultdict(dict)
         feature_vecs = self.model.full_graph_features_vector[self._mode]
         for sentence_idx, edge in feature_vecs.items():
-            self.scores[sentence_idx] = {}
+            # self.scores[sentence_idx] = {}
             for key, feature_vec in edge.items():
-                self.scores[sentence_idx].update({key: feature_vec.dot(self.current_weight_vec_t).data[0]})
+                self.scores[sentence_idx].update({key: feature_vec.dot(self.current_weight_vec_t).A[0][0]})
 
     def check_valid_tree(self, pred_tree, t):
         """
