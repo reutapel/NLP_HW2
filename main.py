@@ -105,7 +105,9 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
         # write_file_name = datetime.now().strftime(directory + 'evaluations/result_MEMM_basic_model_final__' + test_type +
         #                                           '%d_%m_%Y_%H_%M.wtag')
         evaluate_obj = Evaluate(parser_model_obj, perceptron_obj, directory)
-        accuracy, mistakes_dict_name = evaluate_obj.calculate_accuracy(test_type)
+
+        if test_type != 'comp':
+            accuracy, mistakes_dict_name = evaluate_obj.calculate_accuracy(test_type)
 
         print('{}: The model hyper parameters and results are: \n num_of_iter: {} \n test file: {} \n train file: {} '
               '\n test type: {} \n features combination list: {} \n accuracy: {:%} \n mistakes dict name: {}'

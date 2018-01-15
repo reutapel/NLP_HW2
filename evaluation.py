@@ -73,11 +73,11 @@ class Evaluate:
         :param inference_mode: for updates the class variables to the correct work mode
         :return:
         """
-
-        if inference_mode == 'comp':
-            print('can not calculate accuracy for non train/test mode')
-            logging.info('can not calculate accuracy for non train/test mode')
-            return
+        #
+        # if inference_mode == 'comp':
+        #     print('can not calculate accuracy for non train/test mode')
+        #     logging.info('can not calculate accuracy for non train/test mode')
+        #     return
 
         # change relevant class variables
         self.update_inference_mode(inference_mode)
