@@ -5,6 +5,7 @@ import time
 from chu_liu import Digraph
 import pickle
 from scipy.sparse import csr_matrix
+from collections import defaultdict
 
 
 # TODO - Understand when should the perceptron stop updating weights
@@ -84,8 +85,8 @@ class StructPerceptron:
         for i in range(num_of_iter):
             print('{}: Starting Iteration #{}'.format(time.asctime(time.localtime(time.time())), i + 1))
             logging.info('{}: Starting Iteration #{}'.format(time.asctime(time.localtime(time.time())), i + 1))
-            self.calculate_new_scores()
             for t in range(len(self.gold_tree)):
+                self.calculate_new_scores(t)
                 if t % 100 == 0:
                     print('{}: Working on sentence #{}'.format(time.asctime(time.localtime(time.time())), t + 1))
                     logging.info('{}: Working on sentence #{}'.format(time.asctime(time.localtime(time.time())), t + 1))
@@ -154,19 +155,25 @@ class StructPerceptron:
         """
         return self.scores[self.current_sentence][(source, target)]
 
-    def calculate_new_scores(self):
+    def calculate_new_scores(self, sentence_idx):
         """
         this method update self.scores dict with the scores of likelihood for each edge in each sentence
 
         :cvar self.scores[sentence_index][(source, target)]: = feature_vec[sentence_index](source, target)*weight_vec^T
         :return: None
         """
-        self.scores = {}
+        self.scores = defaultdict(dict)
         feature_vecs = self.model.full_graph_features_vector[self._mode]
-        for sentence_idx, edge in feature_vecs.items():
-            self.scores[sentence_idx] = {}
-            for key, feature_vec in edge.items():
-                self.scores[sentence_idx].update({key: feature_vec.dot(self.current_weight_vec_t).data[0]})
+        current_weight_non_zero_indx = self.current_weight_vec_t.nonzero()[0]
+        for edge, features_indexes in feature_vecs[sentence_idx].items():
+        # for sentence_idx, edge in feature_vecs.items():
+            # self.scores[sentence_idx] = {}
+            features_indexes = np.array(features_indexes)
+            # for key, feature_vec in edge:
+            #     self.scores[sentence_idx].update({key: feature_vec.dot(self.current_weight_vec_t).A[0][0]})
+            intersection_indexes = np.intersect1d(features_indexes, current_weight_non_zero_indx)
+            relevant_weight = [self.current_weight_vec_t[value].data[0] for value in intersection_indexes]
+            self.scores[sentence_idx].update({edge: sum(relevant_weight)})
 
     def check_valid_tree(self, pred_tree, t):
         """
