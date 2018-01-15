@@ -11,7 +11,7 @@ from evaluation import Evaluate
 # open log connection
 sub_dirs = ["logs", "evaluations", "dict", "weights"]
 base_directory = os.path.abspath(os.curdir)
-directory = os.path.join(base_directory, "output", datetime.now().strftime("Basic_model_50_iters_%d_%m_%Y_%H_%M_%S"))
+directory = os.path.join(base_directory, "output", datetime.now().strftime("Basic_model_1_iter_np_%d_%m_%Y_%H_%M_%S"))
 for sub_dir in sub_dirs:
     os.makedirs(os.path.join(directory, sub_dir))
 directory += os.sep
@@ -96,9 +96,9 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
         weights = perceptron_obj.perceptron(num_of_iter=num_of_iter)
 
         train_run_time = (time.time() - train_start_time) / 60.0
-        print('{}: Finish Perceptron for features : {} and lambda: {}. run time: {}'.
+        print('{}: Finish Perceptron for features : {} and num_of_iter: {}. run time: {} minutes'.
               format(time.asctime(time.localtime(time.time())), features_combination, num_of_iter, train_run_time))
-        logging.info('{}: Finish Perceptron for features : {} and lambda: {}. run time: {}'.
+        logging.info('{}: Finish Perceptron for features : {} and num_of_iter: {}. run time: {} minutes'.
                      format(time.asctime(time.localtime(time.time())), features_combination, num_of_iter, train_run_time))
 
         # Evaluate the results of the model
@@ -169,7 +169,7 @@ if __name__ == "__main__":
             # 'all_features': [advanced_features],
             'basic_model': [basic_features]}
 
-        num_of_iter_list = [5]  # [20, 50, 80, 100]
+        num_of_iter_list = [2]  # [20, 50, 80, 100]
         for num_of_iter in num_of_iter_list:
             start_time = time.time()
             if not comp:

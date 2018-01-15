@@ -6,6 +6,7 @@ from chu_liu import Digraph
 import pickle
 from scipy.sparse import csr_matrix
 from collections import defaultdict
+from copy import copy
 
 
 # TODO - Understand when should the perceptron stop updating weights
@@ -38,8 +39,9 @@ class StructPerceptron:
         self.features_vector_train = model.gold_tree_features_vector['train']
         self.weight_matrix = []
         self.current_weight_vec_iter = 0
-        self.current_weight_vec = csr_matrix((1, self.feature_vec_len), dtype=int)
-        self.current_weight_vec_t = self.current_weight_vec.T
+        # self.current_weight_vec = csr_matrix((1, self.feature_vec_len), dtype=int)
+        self.current_weight_vec = np.zeros(self.feature_vec_len, dtype=int)
+        # self.current_weight_vec_t = self.current_weight_vec.T
         self.current_sentence = 0
         self.scores = {}
         # full graph contains a full graph + root per sentence {sentence_id: {parent_node: [child_nods]}}
@@ -65,6 +67,7 @@ class StructPerceptron:
         """
         self._mode = mode
         self.gold_tree = self.global_gold_tree[mode]
+        self.scores = defaultdict(dict)
         print('{}: Start Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: Start Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
         self.sets_of_nodes, self.full_graph = GraphUtil.create_full_graph(gold_tree=self.gold_tree)
@@ -72,7 +75,9 @@ class StructPerceptron:
         logging.info('{}: Finish Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
         # if the mode is 'test' or 'comp' we need a new scores dict
         if self._mode != 'train':
-            self.calculate_new_scores()
+            feature_vecs = self.model.full_graph_features_vector[self._mode]
+            for sentence_idx in feature_vecs.keys():
+                self.calculate_new_scores(sentence_idx)
 
     def perceptron(self, num_of_iter):
         """
@@ -162,18 +167,21 @@ class StructPerceptron:
         :cvar self.scores[sentence_index][(source, target)]: = feature_vec[sentence_index](source, target)*weight_vec^T
         :return: None
         """
-        self.scores = defaultdict(dict)
+
         feature_vecs = self.model.full_graph_features_vector[self._mode]
-        current_weight_non_zero_indx = self.current_weight_vec_t.nonzero()[0]
+        # current_weight_np = copy(self.current_weight_vec_t.toarray())
+        # current_weight_non_zero_indx = self.current_weight_vec_t.nonzero()[0]
         for edge, features_indexes in feature_vecs[sentence_idx].items():
         # for sentence_idx, edge in feature_vecs.items():
             # self.scores[sentence_idx] = {}
-            features_indexes = np.array(features_indexes)
+            # features_indexes = np.array(features_indexes)
             # for key, feature_vec in edge:
             #     self.scores[sentence_idx].update({key: feature_vec.dot(self.current_weight_vec_t).A[0][0]})
-            intersection_indexes = np.intersect1d(features_indexes, current_weight_non_zero_indx)
-            relevant_weight = [self.current_weight_vec_t[value].data[0] for value in intersection_indexes]
-            self.scores[sentence_idx].update({edge: sum(relevant_weight)})
+            # intersection_indexes = np.intersect1d(features_indexes, current_weight_non_zero_indx)
+            # relevant_weight = [current_weight_np[value] for value in features_indexes]
+            # self.scores[sentence_idx].update({edge: sum(relevant_weight)})
+            relevant_weight = [self.current_weight_vec[value] for value in features_indexes]
+            self.scores[sentence_idx][edge] = int(sum(relevant_weight))
 
     def check_valid_tree(self, pred_tree, t):
         """

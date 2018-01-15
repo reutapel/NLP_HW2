@@ -629,8 +629,9 @@ class ParserModel:
                 edge_indexes_vector = self.get_local_feature_vec(sentence_index, source, target, mode)
                 tree_indexes_vector = np.add(edge_indexes_vector, tree_indexes_vector)
 
-        csr_tree_indexes_vector = csr_matrix(tree_indexes_vector)
-        return csr_tree_indexes_vector
+        # csr_tree_indexes_vector = csr_matrix(tree_indexes_vector)
+        # return csr_tree_indexes_vector
+        return tree_indexes_vector
 
     def create_gold_tree_feature_vector(self, mode):
         """
