@@ -113,6 +113,9 @@ class ParserModel:
                                            'test': defaultdict(dict),
                                            'comp': defaultdict(dict)}
 
+        # full graph of the train
+        self.full_graph = defaultdict(dict)
+
         # create object of the GraphUtils
         self.graph_utils = GraphUtil()
 
@@ -681,6 +684,7 @@ class ParserModel:
 
         # get full graphs for the mode
         _, full_graphs = self.graph_utils.create_full_graph(self.gold_tree[mode])
+        self.full_graph = copy(full_graphs)
         for sentence_index, sentence_full_graph in full_graphs.items():
             for source, target_list in sentence_full_graph.items():
                 for target in target_list:
