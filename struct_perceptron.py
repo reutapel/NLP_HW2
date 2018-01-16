@@ -41,7 +41,7 @@ class StructPerceptron:
         self.current_weight_vec_iter = 0
         # self.current_weight_vec = csr_matrix((1, self.feature_vec_len), dtype=int)
         self.current_weight_vec = np.zeros(self.feature_vec_len, dtype=int)
-        # self.current_weight_vec_t = self.current_weight_vec.T
+        self.current_weight_vec_t = self.current_weight_vec.T
         self.current_sentence = 0
         self.scores = {}
         # full graph contains a full graph + root per sentence {sentence_id: {parent_node: [child_nods]}}
@@ -146,7 +146,6 @@ class StructPerceptron:
                   .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
             logging.info('{}: Finished calculating mst for sentence #{}, on {} mode'
                          .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
-        # assert self.check_valid_tree(pred_tree, t), pred_tree
         return pred_tree
 
     def edge_score(self, source, target):
@@ -169,17 +168,7 @@ class StructPerceptron:
         """
 
         feature_vecs = self.model.full_graph_features_vector[self._mode]
-        # current_weight_np = copy(self.current_weight_vec_t.toarray())
-        # current_weight_non_zero_indx = self.current_weight_vec_t.nonzero()[0]
         for edge, features_indexes in feature_vecs[sentence_idx].items():
-        # for sentence_idx, edge in feature_vecs.items():
-            # self.scores[sentence_idx] = {}
-            # features_indexes = np.array(features_indexes)
-            # for key, feature_vec in edge:
-            #     self.scores[sentence_idx].update({key: feature_vec.dot(self.current_weight_vec_t).A[0][0]})
-            # intersection_indexes = np.intersect1d(features_indexes, current_weight_non_zero_indx)
-            # relevant_weight = [current_weight_np[value] for value in features_indexes]
-            # self.scores[sentence_idx].update({edge: sum(relevant_weight)})
             relevant_weight = [self.current_weight_vec[value] for value in features_indexes]
             self.scores[sentence_idx][edge] = int(sum(relevant_weight))
 
@@ -193,8 +182,6 @@ class StructPerceptron:
         :return: True if the tree is valid
         :rtype: bool
         """
-        # if self._mode != 'train' and len(pred_tree[self._ROOT]) != 1:
-        #     return False
         set_of_nodes = self.sets_of_nodes[t]
         for node in set_of_nodes:
             if sum(node in targets for targets in pred_tree.values()) != 1:
@@ -206,12 +193,15 @@ class GraphUtil:
     _ROOT = 0
 
     @staticmethod
-    def create_full_graph(gold_tree):
+    def create_full_graph(gold_tree, edges_existed_on_train=None, pos_edges_existed_on_train=None, pos_dict=None):
         """
         this method will create for a given gold dependency tree,
         a fully connected graph from each sentence of it
 
-        :param gold_tree:
+        :param dict[(int,int),str] pos_dict: the part of speech of given word in position (sentence_index,word_index)
+        :param dict[int,list[int]] edges_existed_on_train: dictionary of edges found in train data
+        :param dict[str,list[str]] pos_edges_existed_on_train: dictionary of Part Of Speech edges existed on the train data
+        :param gold_tree: the original gold_tree of the sentence
         :type gold_tree: dict[int,dict[int,list[int]]]
         :return: set of nodes per graph and full graph
         :rtype: (dict[int,set[int]], dict[int,dict[int,list[int]]])
@@ -225,14 +215,52 @@ class GraphUtil:
                 set_of_nodes = set_of_nodes.union(set(targets))
             if GraphUtil._ROOT in set_of_nodes:
                 set_of_nodes.remove(GraphUtil._ROOT)
-            sets_of_nodes.update({idx: set_of_nodes})
+            sets_of_nodes[idx] = set_of_nodes
             graph = {}
+            pos_per_sentence = None
+            if pos_edges_existed_on_train is not None:
+                pos_per_sentence = GraphUtil.get_valid_pos_edges(idx, pos_dict, pos_edges_existed_on_train)
             for node in set_of_nodes:
-                targets = list(set_of_nodes.difference({node}))
-                graph.update({node: targets})
+                targets = set_of_nodes.difference({node})
+                if edges_existed_on_train is not None:
+                    targets = targets.intersection(set(edges_existed_on_train[node]))
+                if pos_per_sentence is not None:
+                    targets = targets.intersection(set(pos_per_sentence[node]))
+                targets = list(targets)
+                graph[node] = targets
             graph.update({GraphUtil._ROOT: list(set_of_nodes)})
             full_graph.update({idx: graph})
         return sets_of_nodes, full_graph
+
+    @staticmethod
+    def get_valid_pos_edges(sentence_index, pos_dict, pos_edges_existed_on_train):
+        """
+        this method calculates, for a sentence, set of possible edges based on the POS edges from the train data
+
+        :param int sentence_index: the sentence index
+        :param dict[(int,int),str] pos_dict: the part of speech of given word in position (sentence_index,word_index)
+        :param pos_edges_existed_on_train: dictionary of Part Of Speech edges existed on the train data
+        :type pos_edges_existed_on_train: dict[str,list[str]]
+        :return: dictionary of possible edges, based on POS edges from the train
+        :rtype: defaultdict[str,list[int]]
+        """
+        # create tuples of (POS, word_index) for the sentence
+        pos_sentence_tuples = [(pos, w_id) for (s_id, w_id), pos in pos_dict.items() if sentence_index == s_id]
+        # for each POS, the indexes of words with such POS
+        pos_index_mapping = defaultdict(list)  # type: defaultdict[str, list[int]]
+        for pos, w_id in pos_sentence_tuples:
+            pos_index_mapping[pos].append(w_id)
+        # for each POS, the list of targets, based on the edges from the train data
+        pos_targets = defaultdict(set)  # type: defaultdict[str, set[int]]
+        for pos in pos_index_mapping.keys():
+            for target in pos_edges_existed_on_train[pos]:
+                pos_targets[pos] = pos_targets[pos].union(set(pos_index_mapping[target]))
+        # map between the POS indexes location to the list of targets for such POS
+        pos_per_sentence = defaultdict(list)  # type: defaultdict[str, list[int]]
+        for pos in pos_targets.keys():
+            for source in pos_index_mapping[pos]:
+                pos_per_sentence[source] = list(pos_targets[pos].difference({source}))
+        return pos_per_sentence
 
     @staticmethod
     def identical_dependency_tree(pred_tree, gold_tree):
