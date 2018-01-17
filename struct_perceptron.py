@@ -254,7 +254,8 @@ class GraphUtil:
         pos_targets = defaultdict(set)  # type: defaultdict[str, set[int]]
         for pos in pos_index_mapping.keys():
             for target in pos_edges_existed_on_train[pos]:
-                pos_targets[pos] = pos_targets[pos].union(set(pos_index_mapping[target]))
+                if target in pos_index_mapping:
+                    pos_targets[pos] = pos_targets[pos].union(set(pos_index_mapping[target]))
         # map between the POS indexes location to the list of targets for such POS
         pos_per_sentence = defaultdict(list)  # type: defaultdict[str, list[int]]
         for pos in pos_targets.keys():
