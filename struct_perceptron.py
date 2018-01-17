@@ -200,7 +200,7 @@ class GraphUtil:
 
         :param dict[(int,int),str] pos_dict: the part of speech of given word in position (sentence_index,word_index)
         :param dict[int,list[int]] edges_existed_on_train: dictionary of edges found in train data
-        :param dict[str,list[str]] pos_edges_existed_on_train: dictionary of Part Of Speech edges existed on the train data
+        :param dict[str,list[str]] pos_edges_existed_on_train: dict of Part Of Speech edges existed on the train data
         :param gold_tree: the original gold_tree of the sentence
         :type gold_tree: dict[int,dict[int,list[int]]]
         :return: set of nodes per graph and full graph

@@ -49,6 +49,14 @@ class ParserModel:
                                'test': defaultdict(list),
                                'comp': defaultdict(list)}
 
+        # Dictionary of edges found in train data - the indexes of the nodes
+        # The format will be: {source: list of targets}
+        self.edges_existed_on_train = defaultdict(list)
+
+        # Dictionary of edges found in train data - the POS of the nodes
+        # The format will be: {source POS: list of targets POS}
+        self.pos_edges_existed_on_train = defaultdict(list)
+
         """create train data and gold trees dict"""
         self.train_data = pd.read_table(train_file_name, header=None, names=self.file_columns_names)
         # add relevant columns:
@@ -56,6 +64,7 @@ class ParserModel:
         self.train_data = self.train_data.assign(head_word='')
         self.train_data = self.train_data.assign(head_POS='')
         self.create_gold_tree_dictionary('train')
+        self.create_edges_existed_on_train()
 
         """create test data and gold trees dict"""
         self.test_data = pd.read_table(test_file_name, header=None, names=self.file_columns_names)
@@ -247,6 +256,39 @@ class ParserModel:
 
         print('{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
         logging.info('{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
+
+        return
+
+    def create_edges_existed_on_train(self):
+        """
+        This method build edges_existed_on_train and pos_edges_existed_on_train which are all the possible edges that
+        have been seen in the train data - their indexes and their POS
+        :return: no return - build the class variables
+        """
+
+        start_time = time.time()
+        print('{}: Start creating edges_existed_on_train and pos_edges_existed_on_train'.
+              format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: Start creating edges_existed_on_train and pos_edges_existed_on_train'.
+                     format(time.asctime(time.localtime(time.time()))))
+        source_target_df = copy(self.train_data[['token_head', 'token_counter']])
+        source_target_list_groupby = source_target_df.groupby('token_head', as_index=False)
+        for source in source_target_list_groupby.groups.keys():
+            target_df = source_target_list_groupby.get_group(source)['token_counter']
+            target_list = list(target_df)
+            self.edges_existed_on_train[source] = target_list
+
+        source_target_pos_df = copy(self.train_data[['head_POS', 'token_POS']])
+        source_target_list_pos_df = source_target_pos_df.groupby('head_POS', as_index=False)
+        for source in source_target_list_pos_df.groups.keys():
+            target_df = source_target_list_pos_df.get_group(source)['token_POS']
+            target_list = list(target_df)
+            self.pos_edges_existed_on_train[source] = target_list
+
+        print('{}: Finish creating edges_existed_on_train and pos_edges_existed_on_train in {} seconds'
+              .format(time.asctime(time.localtime(time.time())), time.time() - start_time))
+        logging.info('{}: Finish creating edges_existed_on_train and pos_edges_existed_on_train in {} seconds'.
+                     format(time.asctime(time.localtime(time.time())), time.time() - start_time))
 
         return
 
@@ -683,7 +725,9 @@ class ParserModel:
                      format(time.asctime(time.localtime(time.time())), mode))
 
         # get full graphs for the mode
-        _, full_graphs = self.graph_utils.create_full_graph(self.gold_tree[mode])
+        _, full_graphs = self.graph_utils.create_full_graph(self.gold_tree[mode], self.edges_existed_on_train,
+                                                            self.pos_edges_existed_on_train,
+                                                            self.token_POS_dict[mode]['token_POS'])
         self.full_graph = copy(full_graphs)
         for sentence_index, sentence_full_graph in full_graphs.items():
             for source, target_list in sentence_full_graph.items():

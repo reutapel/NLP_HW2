@@ -12,7 +12,7 @@ from evaluation import Evaluate
 sub_dirs = ["logs", "evaluations", "dict", "weights"]
 base_directory = os.path.abspath(os.curdir)
 directory = os.path.join(base_directory, "output", datetime.now().
-                         strftime("Basic_model_5080100_iters_%d_%m_%Y_%H_%M_%S"))
+                         strftime("debug_%d_%m_%Y_%H_%M_%S"))
 for sub_dir in sub_dirs:
     os.makedirs(os.path.join(directory, sub_dir))
 directory += os.sep
@@ -154,7 +154,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
-    train_file = os.path.join(base_directory, 'HW2-files', 'train.labeled')
+    train_file = os.path.join(base_directory, 'HW2-files', 'train_small.labeled')
     test_file = os.path.join(base_directory, 'HW2-files', 'test.labeled')
     comp_file = os.path.join(base_directory, 'HW2-files', 'comp.unlabeled')
     cv = False
@@ -174,7 +174,7 @@ if __name__ == "__main__":
             # 'all_features': [advanced_features],
             'basic_model': [basic_features]}
 
-        num_of_iter_list = [50, 80, 100]  # 20
+        num_of_iter_list = [5]  # [50, 80, 100, 20]
         for num_of_iter in num_of_iter_list:
             start_time = time.time()
             if not comp:
