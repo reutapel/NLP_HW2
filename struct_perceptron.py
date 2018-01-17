@@ -68,11 +68,7 @@ class StructPerceptron:
         self._mode = mode
         self.gold_tree = self.global_gold_tree[mode]
         self.scores = defaultdict(dict)
-        print('{}: Start Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
-        logging.info('{}: Start Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
-        self.sets_of_nodes, self.full_graph = GraphUtil.create_full_graph(gold_tree=self.gold_tree)
-        print('{}: Finish Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
-        logging.info('{}: Finish Creation of Full Graph'.format(time.asctime(time.localtime(time.time()))))
+        self.full_graph = self.model.full_graph[self._mode]
         # if the mode is 'test' or 'comp' we need a new scores dict
         if self._mode != 'train':
             feature_vecs = self.model.full_graph_features_vector[self._mode]
