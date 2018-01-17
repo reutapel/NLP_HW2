@@ -456,7 +456,7 @@ class ParserModel:
 
         # Create the list of relevant feature components
         option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
-                                    c_pos_minus_1, b_pos, distance_p_c, is_parent_before]
+                                    c_pos_minus_1, b_pos, str(distance_p_c), str(is_parent_before)]
         option_for_features_list = [x for x in option_for_features_list if x is not None]
         if feature_number in self.features_combination:
             # get relevant feature
@@ -570,7 +570,7 @@ class ParserModel:
         :return: no return, the indexes_vector is updated
         """
         option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
-                                    c_pos_minus_1, b_pos, distance_p_c, is_parent_before]
+                                    c_pos_minus_1, b_pos, str(distance_p_c), str(is_parent_before)]
         option_for_features_list = [x for x in option_for_features_list if x is not None]
         if feature_number in self.features_combination:
             # build feature
