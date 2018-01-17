@@ -6,8 +6,8 @@ import os
 import numpy as np
 from collections import defaultdict
 from copy import copy
-from scipy.sparse import csr_matrix
 from struct_perceptron import GraphUtil
+import math
 
 
 class ParserModel:
@@ -49,6 +49,14 @@ class ParserModel:
                                'test': defaultdict(list),
                                'comp': defaultdict(list)}
 
+        # Dictionary of edges found in train data - the indexes of the nodes
+        # The format will be: {source: list of targets}
+        self.edges_existed_on_train = defaultdict(list)
+
+        # Dictionary of edges found in train data - the POS of the nodes
+        # The format will be: {source POS: list of targets POS}
+        self.pos_edges_existed_on_train = defaultdict(list)
+
         """create train data and gold trees dict"""
         self.train_data = pd.read_table(train_file_name, header=None, names=self.file_columns_names)
         # add relevant columns:
@@ -56,6 +64,7 @@ class ParserModel:
         self.train_data = self.train_data.assign(head_word='')
         self.train_data = self.train_data.assign(head_POS='')
         self.create_gold_tree_dictionary('train')
+        self.create_edges_existed_on_train()
 
         """create test data and gold trees dict"""
         self.test_data = pd.read_table(test_file_name, header=None, names=self.file_columns_names)
@@ -74,24 +83,32 @@ class ParserModel:
 
         """Define relevant dictionaries"""
         # dictionary for each feature type, will include the number of instances from each feature
-        self.feature_1 = {}
-        self.feature_2 = {}
-        self.feature_3 = {}
-        self.feature_4 = {}
-        self.feature_5 = {}
-        self.feature_6 = {}
-        self.feature_7 = {}
-        self.feature_8 = {}
-        self.feature_9 = {}
-        self.feature_10 = {}
-        self.feature_11 = {}
-        self.feature_12 = {}
-        self.feature_13 = {}
-        self.feature_14 = {}
-        self.feature_15 = {}
-        self.feature_16 = {}
-        self.feature_17 = {}
-        self.feature_18 = {}
+        self.feature_1 = dict()
+        self.feature_2 = dict()
+        self.feature_3 = dict()
+        self.feature_4 = dict()
+        self.feature_5 = dict()
+        self.feature_6 = dict()
+        self.feature_7 = dict()
+        self.feature_8 = dict()
+        self.feature_9 = dict()
+        self.feature_10 = dict()
+        self.feature_11 = dict()
+        self.feature_12 = dict()
+        self.feature_13 = dict()
+        self.feature_14 = dict()
+        self.feature_15 = dict()
+        self.feature_16 = dict()
+        self.feature_17 = dict()
+        self.feature_18 = dict()
+        self.feature_19 = dict()
+        self.feature_20 = dict()
+        self.feature_21 = dict()
+        self.feature_22 = dict()
+        self.feature_23 = dict()
+        self.feature_24 = dict()
+        self.feature_25 = dict()
+        self.feature_26 = dict()
 
         # a dictionary with the dictionary and the description of each feature
         self.features_dicts = self.define_features_dicts()
@@ -112,6 +129,11 @@ class ParserModel:
         self.full_graph_features_vector = {'train': defaultdict(dict),
                                            'test': defaultdict(dict),
                                            'comp': defaultdict(dict)}
+
+        # full graph of the train
+        self.full_graph = {'train': defaultdict(dict),
+                           'test': defaultdict(dict),
+                           'comp': defaultdict(dict)}
 
         # create object of the GraphUtils
         self.graph_utils = GraphUtil()
@@ -154,7 +176,17 @@ class ParserModel:
             '15': [self.feature_15, 'p-pos-1, p-pos, c-pos-1, c-pos'],
             '16': [self.feature_16, 'p-pos, p-pos+1, c-pos, c-pos+1'],
             '17': [self.feature_17, 'p-pos-1, p-pos, c-pos, c-pos+1'],
-            '18': [self.feature_18, 'p-pos, b-pos, c-pos']
+            '18': [self.feature_18, 'p-pos, b-pos, c-pos'],
+            '19': [self.feature_19, 'p-pos, c-pos, distance(p,c)'],
+            '20': [self.feature_20, 'p-word, c-word, distance(p,c)'],
+            '21': [self.feature_21, 'p-pos, c-word, c-pos, is_parent_before'],
+            '22': [self.feature_22, 'p-word, c-word, c-pos, is_parent_before'],
+            '23': [self.feature_23, 'p-word, p-pos, c-pos, is_parent_before'],
+            '24': [self.feature_24, 'p-word, p-pos, c-word, is_parent_before'],
+            '25': [self.feature_25, 'p-word, c-word, distance(p,c), is_parent_before'],
+            '26': [self.feature_26, 'p-pos, c-pos, distance(p,c), is_parent_before']
+
+
         }
 
         return features_dicts
@@ -247,6 +279,39 @@ class ParserModel:
 
         return
 
+    def create_edges_existed_on_train(self):
+        """
+        This method build edges_existed_on_train and pos_edges_existed_on_train which are all the possible edges that
+        have been seen in the train data - their indexes and their POS
+        :return: no return - build the class variables
+        """
+
+        start_time = time.time()
+        print('{}: Start creating edges_existed_on_train and pos_edges_existed_on_train'.
+              format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: Start creating edges_existed_on_train and pos_edges_existed_on_train'.
+                     format(time.asctime(time.localtime(time.time()))))
+        source_target_df = copy(self.train_data[['token_head', 'token_counter']])
+        source_target_list_group_by = source_target_df.groupby('token_head', as_index=False)
+        for source in source_target_list_group_by.groups.keys():
+            target_df = source_target_list_group_by.get_group(source)['token_counter']
+            target_list = list(set(target_df))
+            self.edges_existed_on_train[source] = target_list
+
+        source_target_pos_df = copy(self.train_data[['head_POS', 'token_POS']])
+        source_target_list_pos_df = source_target_pos_df.groupby('head_POS', as_index=False)
+        for source in source_target_list_pos_df.groups.keys():
+            target_df = source_target_list_pos_df.get_group(source)['token_POS']
+            target_list = list(set(target_df))
+            self.pos_edges_existed_on_train[source] = target_list
+
+        print('{}: Finish creating edges_existed_on_train and pos_edges_existed_on_train in {} seconds'
+              .format(time.asctime(time.localtime(time.time())), time.time() - start_time))
+        logging.info('{}: Finish creating edges_existed_on_train and pos_edges_existed_on_train in {} seconds'.
+                     format(time.asctime(time.localtime(time.time())), time.time() - start_time))
+
+        return
+
     def build_features_from_train(self):
         """
         This method build a features from the train data based on the features we want to use
@@ -292,10 +357,14 @@ class ParserModel:
             pos_between = list()
             if parent_index > child_index:
                 index_list = range(child_index + 1, parent_index)
+                parent_before = False
             else:
                 index_list = range(parent_index + 1, child_index)
+                parent_before = True
             for index_between in index_list:
                 pos_between.append(copy(self.token_POS_dict['train']['token_POS'][(sentence_index, index_between)]))
+
+            p_c_distance = abs(parent_index - child_index)
 
             # build feature_1 of p-word, p-pos
             self.update_feature_dict('1', p_word=p_word, p_pos=p_pos)
@@ -340,6 +409,25 @@ class ParserModel:
                 for b_pos in pos_between:
                     self.update_feature_dict('18', p_pos=p_pos, c_pos=c_pos, b_pos=b_pos)
 
+            # build feature_19 of p-pos, c-pos, distance(p,c)
+            self.update_feature_dict('19', p_pos=p_pos, c_pos=c_pos, distance_p_c=p_c_distance)
+            # build feature_20 of p-word, c-word, distance(p,c)
+            self.update_feature_dict('20', p_word=p_word, c_word=c_word, distance_p_c=p_c_distance)
+            # build feature_21 of p-pos, c-word, c-pos, is_parent_before
+            self.update_feature_dict('21', p_pos=p_pos, c_word=c_word, c_pos=c_pos, is_parent_before=parent_before)
+            # build feature_22 of p-word, c-word, c-pos, is_parent_before
+            self.update_feature_dict('22', p_word=p_word, c_word=c_word, c_pos=c_pos, is_parent_before=parent_before)
+            # build feature_23 of p-word, p-pos, c-pos, is_parent_before
+            self.update_feature_dict('23', p_word=p_word, p_pos=p_pos, c_pos=c_pos, is_parent_before=parent_before)
+            # build feature_24 of p-word, p-pos, c-word, is_parent_before
+            self.update_feature_dict('24', p_word=p_word, p_pos=p_pos, c_word=c_word, is_parent_before=parent_before)
+            # build feature_25 of p-word, c-word, distance(p,c), is_parent_before
+            self.update_feature_dict('25', p_word=p_word, c_word=c_word, is_parent_before=parent_before,
+                                     distance_p_c=p_c_distance)
+            # build feature_26 of p-pos, c-pos, distance(p,c), is_parent_before
+            self.update_feature_dict('26', p_pos=p_pos, c_pos=c_pos, is_parent_before=parent_before,
+                                     distance_p_c=p_c_distance)
+
         # save all features dicts to csv
         for feature in self.features_dicts.keys():
             self.save_dictionary(feature)
@@ -347,7 +435,8 @@ class ParserModel:
         return
 
     def update_feature_dict(self, feature_number, p_word=None, p_pos=None, c_word=None, c_pos=None, p_pos_minus_1=None,
-                            p_pos_plus_1=None, c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None):
+                            p_pos_plus_1=None, c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None, distance_p_c=None,
+                            is_parent_before=None):
         """
         This method update the relevant feature dictionary
         :param feature_number: the number of the feature
@@ -360,12 +449,14 @@ class ParserModel:
         :param c_pos_minus_1: POS to the left of child in sentence
         :param c_pos_plus_1: POS to the right of child in sentence
         :param b_pos: POS of a word in between parent and child nodes.
+        :param distance_p_c: distance between parent and child
+        :param is_parent_before: if the parent has lower index than the child
         :return: no return, just update the object's features' dictionaries
         """
 
         # Create the list of relevant feature components
         option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
-                                    c_pos_minus_1, b_pos]
+                                    c_pos_minus_1, b_pos, str(distance_p_c), str(is_parent_before)]
         option_for_features_list = [x for x in option_for_features_list if x is not None]
         if feature_number in self.features_combination:
             # get relevant feature
@@ -457,7 +548,8 @@ class ParserModel:
 
     def calculate_local_feature_vec_per_feature(self, indexes_vector, feature_number, p_word=None, p_pos=None,
                                                 c_word=None, c_pos=None, p_pos_minus_1=None, p_pos_plus_1=None,
-                                                c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None, is_full_graph=False):
+                                                c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None, is_full_graph=False,
+                                                distance_p_c=None, is_parent_before=None):
         """
         This method create a feature vector per feature number for a given edge and a given feature number
         :param indexes_vector: if is_full_graph is True - this is a list and we will insert the indexes of the features
@@ -473,10 +565,12 @@ class ParserModel:
         :param c_pos_plus_1: POS to the right of child in sentence
         :param b_pos: POS of a word in between parent and child nodes.
         :param is_full_graph: will be True if we build the full graph features vector
+        :param distance_p_c: the distance between the parend and the child
+        :param is_parent_before: if the parent has lower index than the child
         :return: no return, the indexes_vector is updated
         """
         option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
-                                    c_pos_minus_1, b_pos]
+                                    c_pos_minus_1, b_pos, str(distance_p_c), str(is_parent_before)]
         option_for_features_list = [x for x in option_for_features_list if x is not None]
         if feature_number in self.features_combination:
             # build feature
@@ -548,10 +642,14 @@ class ParserModel:
         pos_between = list()
         if parent_index > child_index:
             index_list = range(child_index + 1, parent_index)
+            parent_before = False
         else:
             index_list = range(parent_index + 1, child_index)
+            parent_before = True
         for index_between in index_list:
             pos_between.append(copy(self.token_POS_dict[mode]['token_POS'][(sentence_index, index_between)]))
+
+        p_c_distance = abs(parent_index - child_index)
 
         # calculate feature_1 of p-word, p-pos
         self.calculate_local_feature_vec_per_feature(indexes_vector, '1', p_word=p_word, p_pos=p_pos,
@@ -609,6 +707,34 @@ class ParserModel:
             for b_pos in pos_between:
                 self.calculate_local_feature_vec_per_feature(indexes_vector, '18', p_pos=p_pos, c_pos=c_pos,
                                                              b_pos=b_pos, is_full_graph=is_full_graph)
+
+        # build feature_19 of p-pos, c-pos, distance(p,c)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '19', p_pos=p_pos, c_pos=c_pos, distance_p_c=p_c_distance,
+                                                     is_full_graph=is_full_graph)
+        # build feature_20 of p-word, c-word, distance(p,c)
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '20', p_word=p_word, c_word=c_word, distance_p_c=p_c_distance,
+                                                     is_full_graph=is_full_graph)
+        # build feature_21 of p-pos, c-word, c-pos, is_parent_before
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '21', p_pos=p_pos, c_word=c_word, c_pos=c_pos,
+                                                     is_parent_before=parent_before, is_full_graph=is_full_graph)
+        # build feature_22 of p-word, c-word, c-pos, is_parent_before
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '22', p_word=p_word, c_word=c_word, c_pos=c_pos,
+                                                     is_parent_before=parent_before, is_full_graph=is_full_graph)
+        # build feature_23 of p-word, p-pos, c-pos, is_parent_before
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '23', p_word=p_word, p_pos=p_pos, c_pos=c_pos,
+                                                     is_parent_before=parent_before, is_full_graph=is_full_graph)
+        # build feature_24 of p-word, p-pos, c-word, is_parent_before
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '24', p_word=p_word, p_pos=p_pos, c_word=c_word,
+                                                     is_parent_before=parent_before, is_full_graph=is_full_graph)
+        # build feature_25 of p-word, c-word, distance(p,c), is_parent_before
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '25', p_word=p_word, c_word=c_word,
+                                                     is_parent_before=parent_before, distance_p_c=p_c_distance,
+                                                     is_full_graph=is_full_graph)
+        # build feature_26 of p-pos, c-pos, distance(p,c), is_parent_before
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '26', p_pos=p_pos, c_pos=c_pos,
+                                                     is_parent_before=parent_before, distance_p_c=p_c_distance,
+                                                     is_full_graph=is_full_graph)
+
         return indexes_vector
 
     def create_global_feature_vector(self, tree, sentence_index, mode):
@@ -680,7 +806,10 @@ class ParserModel:
                      format(time.asctime(time.localtime(time.time())), mode))
 
         # get full graphs for the mode
-        _, full_graphs = self.graph_utils.create_full_graph(self.gold_tree[mode])
+        _, full_graphs = self.graph_utils.create_full_graph(self.gold_tree[mode], self.edges_existed_on_train,
+                                                            self.pos_edges_existed_on_train,
+                                                            self.token_POS_dict[mode]['token_POS'])
+        self.full_graph[mode] = copy(full_graphs)
         for sentence_index, sentence_full_graph in full_graphs.items():
             for source, target_list in sentence_full_graph.items():
                 for target in target_list:

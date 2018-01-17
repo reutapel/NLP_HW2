@@ -11,7 +11,8 @@ from evaluation import Evaluate
 # open log connection
 sub_dirs = ["logs", "evaluations", "dict", "weights"]
 base_directory = os.path.abspath(os.curdir)
-directory = os.path.join(base_directory, "output", datetime.now().strftime("Basic_model_20_iter_%d_%m_%Y_%H_%M_%S"))
+directory = os.path.join(base_directory, "output", datetime.now().
+                         strftime("advanced_model_20_iter_%d_%m_%Y_%H_%M_%S"))
 for sub_dir in sub_dirs:
     os.makedirs(os.path.join(directory, sub_dir))
 directory += os.sep
@@ -161,7 +162,7 @@ if __name__ == "__main__":
     if cv:
         cross_validation(train_file)
     else:
-        advanced_features = range(1, 19)
+        advanced_features = range(1, 27)
         advanced_features = [str(i) for i in advanced_features]
         basic_features = range(1, 14)
         basic_features = [str(i) for i in basic_features]
@@ -170,10 +171,10 @@ if __name__ == "__main__":
         basic_features.remove('11')
         basic_features.remove('12')
         feature_type_dict = {
-            # 'all_features': [advanced_features],
-            'basic_model': [basic_features]}
+            'all_features': [advanced_features]}
+            # 'basic_model': [basic_features]}
 
-        num_of_iter_list = [20]  # [20, 50, 80, 100]
+        num_of_iter_list = [20]  # [50, 80, 100, 20]
         for num_of_iter in num_of_iter_list:
             start_time = time.time()
             if not comp:

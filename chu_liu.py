@@ -22,13 +22,13 @@
 
 import collections
 
+new_node_id = [111111]
+
 
 class Digraph:
     """We represent directed graphs using a map of outgoing edges for each node."""
 
-    new_node_id = 111111
-
-    def __init__(self, successors, get_score=None, get_label=None):
+    def __init__(self, successors, get_score=None, get_label=None, node_id=None):
         """Initialize this digraph using a successors map and a score function.
 
         successors: A map from source node ids to lists of target nodes that can
@@ -43,6 +43,10 @@ class Digraph:
         """
         self.successors = successors
         self.get_score = get_score
+        if node_id is None:
+            self.new_node_id = new_node_id[:]
+        else:
+            self.new_node_id = node_id
         if not callable(self.get_score):
             self.get_score = lambda s, t: 0
         self.get_label = get_label
@@ -85,7 +89,7 @@ class Digraph:
 
         Returns a new Digraph.
         """
-        mark = Digraph.new_node_id
+        mark = self.new_node_id[0]
         candidate = self.greedy()
         cycle = candidate.find_cycle()
         if not cycle:
@@ -128,8 +132,8 @@ class Digraph:
         represent the cycle. The id is the id of the new node.
         """
         # create a new id to represent the cycle in the resulting graph.
-        new_id = Digraph.new_node_id
-        Digraph.new_node_id += 1
+        new_id = self.new_node_id[0]
+        self.new_node_id[0] += 1
 
         # we store links that cross into and out of the cycle in these maps. the
         # to_cycle map contains links reaching into the cycle, and is thus a map
@@ -185,14 +189,11 @@ class Digraph:
         # from the source to our new node, with an appropriate edge score.
         for source, targets in to_cycle.items():
             succs[source].append(new_id)
-            max_score = None
+            max_score = -1e100
             max_target = None
             for t in targets:
                 score = self.get_score(source, t) - self.get_score(pred[t], t)
-                if max_score is None:
-                    max_score = score
-                    max_target = t
-                elif score > max_score:
+                if score > max_score:
                     max_score = score
                     max_target = t
             old_edges[source].append(max_target)
@@ -201,7 +202,8 @@ class Digraph:
 
         return new_id, old_edges, Digraph(succs,
                                           lambda s, t: scores[s, t],
-                                          lambda s, t: labels[s, t])
+                                          lambda s, t: labels[s, t],
+                                          node_id=self.new_node_id)
 
     def merge(self, mst, new_id, old_edges, cycle):
         """Merge the nodes in an MST that were contracted from a cycle.
