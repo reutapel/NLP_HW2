@@ -131,7 +131,9 @@ class ParserModel:
                                            'comp': defaultdict(dict)}
 
         # full graph of the train
-        self.full_graph = defaultdict(dict)
+        self.full_graph = {'train': defaultdict(dict),
+                           'test': defaultdict(dict),
+                           'comp': defaultdict(dict)}
 
         # create object of the GraphUtils
         self.graph_utils = GraphUtil()
@@ -290,9 +292,9 @@ class ParserModel:
         logging.info('{}: Start creating edges_existed_on_train and pos_edges_existed_on_train'.
                      format(time.asctime(time.localtime(time.time()))))
         source_target_df = copy(self.train_data[['token_head', 'token_counter']])
-        source_target_list_groupby = source_target_df.groupby('token_head', as_index=False)
-        for source in source_target_list_groupby.groups.keys():
-            target_df = source_target_list_groupby.get_group(source)['token_counter']
+        source_target_list_group_by = source_target_df.groupby('token_head', as_index=False)
+        for source in source_target_list_group_by.groups.keys():
+            target_df = source_target_list_group_by.get_group(source)['token_counter']
             target_list = list(set(target_df))
             self.edges_existed_on_train[source] = target_list
 
@@ -807,7 +809,7 @@ class ParserModel:
         _, full_graphs = self.graph_utils.create_full_graph(self.gold_tree[mode], self.edges_existed_on_train,
                                                             self.pos_edges_existed_on_train,
                                                             self.token_POS_dict[mode]['token_POS'])
-        self.full_graph = copy(full_graphs)
+        self.full_graph[mode] = copy(full_graphs)
         for sentence_index, sentence_full_graph in full_graphs.items():
             for source, target_list in sentence_full_graph.items():
                 for target in target_list:
