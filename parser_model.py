@@ -228,9 +228,13 @@ class ParserModel:
 
             if mode != 'comp':
                 # for each node add the sentence[token_counter]
+                if row['token_counter'] not in sentence_dict.keys():
+                    sentence_dict[row['token_counter']] = []
+                # add the edge: {head: target}
                 sentence_dict[row['token_head']].append(row['token_counter'])
 
             else:
+                # if this is comp: append the node to the root's list
                 sentence_dict[0].append(row['token_counter'])
 
             # update the sentence_index in the relevant data dataframe

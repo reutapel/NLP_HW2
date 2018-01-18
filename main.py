@@ -12,7 +12,7 @@ from evaluation import Evaluate
 sub_dirs = ["logs", "evaluations", "dict", "weights"]
 base_directory = os.path.abspath(os.curdir)
 directory = os.path.join(base_directory, "output", datetime.now().
-                         strftime("advanced_model_20_iter_%d_%m_%Y_%H_%M_%S"))
+                         strftime("advanced_model_5080100_iter_%d_%m_%Y_%H_%M_%S"))
 for sub_dir in sub_dirs:
     os.makedirs(os.path.join(directory, sub_dir))
 directory += os.sep
