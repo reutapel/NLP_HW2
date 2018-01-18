@@ -109,6 +109,9 @@ class ParserModel:
         self.feature_24 = dict()
         self.feature_25 = dict()
         self.feature_26 = dict()
+        # todo: add child- parent - grandparent
+        # todo: add brothers
+        # todo: think if we want to add road from p to b
 
         # a dictionary with the dictionary and the description of each feature
         self.features_dicts = self.define_features_dicts()
@@ -185,8 +188,6 @@ class ParserModel:
             '24': [self.feature_24, 'p-word, p-pos, c-word, is_parent_before'],
             '25': [self.feature_25, 'p-word, c-word, distance(p,c), is_parent_before'],
             '26': [self.feature_26, 'p-pos, c-pos, distance(p,c), is_parent_before']
-
-
         }
 
         return features_dicts
@@ -244,15 +245,12 @@ class ParserModel:
         sentence_index += 1
 
         # after we have the sentence index- we will create the data_token_pos_dict
-        data_token_pos_dict = data[['token', 'token_POS', 'sentence_index', 'token_counter']]\
+        self.token_POS_dict[mode] = data[['token', 'token_POS', 'sentence_index', 'token_counter']]\
             .set_index(['sentence_index', 'token_counter']).to_dict()
         # add the root
         for root_index in range(sentence_index):
-            data_token_pos_dict['token'][(root_index, 0)] = 'root'
-            data_token_pos_dict['token_POS'][(root_index, 0)] = 'root'
-
-        # update self.token_POS_dict with the relevant mode
-        self.token_POS_dict[mode] = data_token_pos_dict
+            self.token_POS_dict[mode]['token'][(root_index, 0)] = 'root'
+            self.token_POS_dict[mode]['token_POS'][(root_index, 0)] = 'root'
 
         if mode == 'comp':  # if this is comp - the next lines are not relevant
             print('{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
@@ -265,8 +263,8 @@ class ParserModel:
         for index, row in data.iterrows():
             token_head = row['token_head']
             curr_sentence_index = row['sentence_index']
-            data.set_value(index, 'head_word', data_token_pos_dict['token'][(curr_sentence_index, token_head)])
-            data.set_value(index, 'head_POS', data_token_pos_dict['token_POS'][(curr_sentence_index, token_head)])
+            data.set_value(index, 'head_word', self.token_POS_dict[mode]['token'][(curr_sentence_index, token_head)])
+            data.set_value(index, 'head_POS', self.token_POS_dict[mode]['token_POS'][(curr_sentence_index, token_head)])
 
         print('{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
         logging.info('{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
