@@ -34,16 +34,14 @@ class StructPerceptron:
         self.model = model
         # number of features
         self.feature_vec_len = model.feature_vec_len
-        self.global_gold_tree = model.gold_tree
+        self._global_gold_tree = model.gold_tree
         # the feature vector of a complete sentence in the training
         self.features_vector_train = model.gold_tree_features_vector['train']
-        self.weight_matrix = []
         self.current_weight_vec_iter = 0
         # self.current_weight_vec = csr_matrix((1, self.feature_vec_len), dtype=int)
         self.current_weight_vec = np.zeros(self.feature_vec_len, dtype=int)
-        self.current_weight_vec_t = self.current_weight_vec.T
         self.current_sentence = 0
-        self.scores = {}
+        self.scores = defaultdict(dict)    # type: defaultdict[int,dict[(int,int),int]]
         # full graph contains a full graph + root per sentence {sentence_id: {parent_node: [child_nods]}}
         self.full_graph = {}
         self.sets_of_nodes = {}  # dict that contains set of nodes per sentence: {sentence_id: set_of_nodes}
@@ -52,13 +50,14 @@ class StructPerceptron:
         self.gold_tree = None
         self.inference_mode(mode)
 
-    def inference_mode(self, mode='train'):
+    def inference_mode(self, mode='train', weight_vec=None):
         """
         based on whether we use this class for train or test,
         this method sets the gold tree source and the mode of using the model functions,
         and than creates a new full_graph dictionary out of the relevant gold tree
         if the mode of the class is not train, we need also to set the scores dict
 
+        :param weight_vec:
         :param str mode: indicates class mode:
         * train mode ('train')
         * test mode ('test')
@@ -66,13 +65,15 @@ class StructPerceptron:
         :return: None
         """
         self._mode = mode
-        self.gold_tree = self.global_gold_tree[mode]
+        self.gold_tree = self._global_gold_tree[mode]
         self.scores = defaultdict(dict)
         self.full_graph = self.model.full_graph[self._mode]
         # if the mode is 'test' or 'comp' we need a new scores dict
         if self._mode != 'train':
-            feature_vecs = self.model.full_graph_features_vector[self._mode]
-            for sentence_idx in feature_vecs.keys():
+            if weight_vec is not None:
+                self.current_weight_vec = copy(weight_vec)
+            sentence_count = range(len(self.full_graph.keys()))
+            for sentence_idx in sentence_count:
                 self.calculate_new_scores(sentence_idx)
 
     def perceptron(self, num_of_iter):
@@ -99,20 +100,14 @@ class StructPerceptron:
                     new_weight_vec = self.current_weight_vec + curr_feature_vec - new_feature_vec
                     self.current_weight_vec_iter += 1
                     self.current_weight_vec = new_weight_vec
-                    self.current_weight_vec_t = new_weight_vec.T
-                # try:
-                #     pass
-                # except AssertionError as err:
-                #     pred_tree = err.args[0]    # type: dict[int,list[int]]
-                #     print("The algorithm returned a bad tree, update is skipped. \n tree: {}".format(pred_tree))
-                #     logging.error("The algorithm returned a bad tree, update is skipped. \n tree: {}"
-                #                   .format(pred_tree))
-                # finally:
+            if i+1 in [20, 50, 80, 100]:
+                with open(os.path.join(self.directory, 'final_weight_vec_{}.pkl'.format(i + 1)), 'wb') as f:
+                    pickle.dump(self.current_weight_vec, f)
         print("{}: the number of weight updates in this training:{}".format(time.asctime(time.localtime(time.time()))
                                                                             , self.current_weight_vec_iter))
         logging.info("{}: the number of weight updates in this training:{}"
                      .format(time.asctime(time.localtime(time.time())), self.current_weight_vec_iter))
-        with open(os.path.join(self.directory, 'final_weight_vec.pkl'), 'wb') as f:
+        with open(os.path.join(self.directory, 'final_weight_vec_{}.pkl'.format(num_of_iter)), 'wb') as f:
             pickle.dump(self.current_weight_vec, f)
         return self.current_weight_vec
 
@@ -133,8 +128,8 @@ class StructPerceptron:
                          .format(time.asctime(time.localtime(time.time())), t + 1, self._mode))
         if self.current_sentence != t:
             self.current_sentence = t
-        pred_tree = self.full_graph.get(t)
-        digraph = Digraph(pred_tree, get_score=self.edge_score)
+        full_tree = self.full_graph[t]
+        digraph = Digraph(full_tree, get_score=self.edge_score)
         new_graph = digraph.mst()
         pred_tree = new_graph.successors
         if t % 100 == 0:
@@ -202,8 +197,8 @@ class GraphUtil:
         :return: set of nodes per graph and full graph
         :rtype: (dict[int,set[int]], dict[int,dict[int,list[int]]])
         """
-        sets_of_nodes = {}
-        full_graph = {}
+        sets_of_nodes = defaultdict(set)
+        full_graph = defaultdict(dict)
         for idx, sentence in gold_tree.items():
             set_of_nodes = set()
             for source, targets in sentence.items():
@@ -212,7 +207,7 @@ class GraphUtil:
             if GraphUtil._ROOT in set_of_nodes:
                 set_of_nodes.remove(GraphUtil._ROOT)
             sets_of_nodes[idx] = set_of_nodes
-            graph = {}
+            graph = defaultdict(list)
             pos_per_sentence = None
             if pos_edges_existed_on_train is not None:
                 pos_per_sentence = GraphUtil.get_valid_pos_edges(idx, pos_dict, pos_edges_existed_on_train)
