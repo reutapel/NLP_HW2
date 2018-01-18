@@ -219,8 +219,8 @@ class GraphUtil:
                     targets = targets.intersection(set(pos_per_sentence[node]))
                 targets = list(targets)
                 graph[node] = targets
-            graph.update({GraphUtil._ROOT: list(set_of_nodes)})
-            full_graph.update({idx: graph})
+            graph[GraphUtil._ROOT] = list(set_of_nodes)
+            full_graph[idx] = graph
         return sets_of_nodes, full_graph
 
     @staticmethod
