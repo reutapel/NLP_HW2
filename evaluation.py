@@ -145,8 +145,8 @@ class Evaluate:
                 pred_tree_reverse[target] = head
 
         return pred_tree_reverse
-# TODO: test function
 
+    # TODO: test function
     def infer(self, inference_mode=None):
 
         """
@@ -184,7 +184,6 @@ class Evaluate:
         self.data.to_csv(saved_file_name,sep='\t', header=False)
 
         return saved_file_name
-#TODO: test function & save in matrix confusion mode and not in dict mode
 
     def analyzer(self, mistakes_dict, inference_mode, accuracy):
         """
@@ -218,10 +217,10 @@ class Evaluate:
 
         # now build a dict for confusion matrix of POS: key is (missed source, missed target) value is count
         confusion_POS = dict()
-        for t, missed_dict in analysis_dict.items():
-            for missed_target in missed_dict['missed_targets']:
-                missed_source = missed_dict['missed_targets'][missed_target]
-                wrong_source = missed_dict['wrong_targets'][missed_target]
+        for t, missed_wrong_dict in analysis_dict.items():
+            for missed_target in missed_wrong_dict['missed_targets']:
+                missed_source = missed_wrong_dict['missed_targets'][missed_target]
+                wrong_source = missed_wrong_dict['wrong_targets'][missed_target]
                 if (self.token_POS_dict['token_POS'][t, missed_source],
                     self.token_POS_dict['token_POS'][t, wrong_source]) in confusion_POS.keys():
                     confusion_POS[(self.token_POS_dict['token_POS'][t, missed_source],
