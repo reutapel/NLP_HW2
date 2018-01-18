@@ -214,7 +214,7 @@ class ParserModel:
             return dict()
 
         sentence_index = -1
-        sentence_dict = dict()
+        sentence_dict = defaultdict(list)
         for index, row in data.iterrows():
             if row['token_counter'] == 1:
                 # if this is the first word in the sentence: insert the list of the previous sen. to the gold tree dict
@@ -223,24 +223,18 @@ class ParserModel:
                 else:  # if this is not the first sentence - insert the list of the previous sen. to the gold tree dict
                     self.gold_tree[mode][sentence_index] = sentence_dict
                     sentence_index += 1
-                    sentence_dict = dict()
+                    sentence_dict = defaultdict(list)
 
             if mode != 'comp':
                 # for each node add the sentence[token_counter]
                 if row['token_counter'] not in sentence_dict.keys():
                     sentence_dict[row['token_counter']] = []
                 # add the edge: {head: target}
-                if row['token_head'] in sentence_dict.keys():
-                    sentence_dict[row['token_head']].append(row['token_counter'])
-                else:
-                    sentence_dict[row['token_head']] = [row['token_counter']]
+                sentence_dict[row['token_head']].append(row['token_counter'])
 
             else:
-                if row['token_counter'] == 1:
-                    # if this is comp: If this is the first word in the sentence - create the list
-                    sentence_dict[0] = [row['token_counter']]
-                else:  # if this is not the first word- append it to the list
-                    sentence_dict[0].append(row['token_counter'])
+                # if this is comp: append the node to the root's list
+                sentence_dict[0].append(row['token_counter'])
 
             # update the sentence_index in the relevant data dataframe
             data.set_value(index, 'sentence_index', sentence_index)
