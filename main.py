@@ -164,6 +164,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
                                  train_file_to_use, test_type, features_combination_list, accuracy[weights],
                                  mistakes_dict_names[weights]))
 
+            # get the weights that gave the best accuracy and save as best weights
             best_weights = max(accuracy, key=accuracy.get)
             with open(os.path.join(weights_directory, best_weights + '.pkl'), 'rb') as fp:
                 best_weights_vec = pickle.load(fp)
@@ -183,8 +184,22 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
                                                                                   inference_file_name, best_weights_name ))
             logging.info('{}: The inferred file name is: {} for best weights: {}'.format(time.asctime(
                 time.localtime(time.time())), inference_file_name, best_weights_name))
+            logging.info('{}: best weights for {}, {}, {}, with accuracy {}, name is: {} '
+                         .format(time.asctime(time.localtime(time.time())), num_of_iter, test_type,
+                                 features_combination_list, accuracy[best_weights],best_weights_name))
+            print('{}: best weights for {}, {}, {}, with accuracy {}, name is: {} '
+                         .format(time.asctime(time.localtime(time.time())), num_of_iter, test_type,
+                                 features_combination_list, accuracy[best_weights], best_weights_name))
+    if comp:
+        for best_weights_vec_loaded in best_weights_list:
+            inference_file_name = evaluate_obj.infer(best_weights_vec_loaded, test_type)
+            print('{}: The inferred file name is: {} for weights: {} '.format(time.asctime(time.localtime
+                                                                                           (time.time())),
+                                                                              inference_file_name, best_weights_vec_loaded))
+            logging.info('{}: The inferred file name is: {} for weights: {} '.format(time.asctime(
+                time.localtime(time.time())), inference_file_name, best_weights_vec_loaded))
 
-        logging.info('-----------------------------------------------------------------------------------')
+    logging.info('-----------------------------------------------------------------------------------')
 
         return
 
@@ -225,7 +240,8 @@ if __name__ == "__main__":
                     main(train_file, test_file, comp_file, 'test', feature_type_list, num_of_iter, comp)
             else:
                 for feature_type_name, feature_type_list in feature_type_dict.items():
-                    main(train_file, test_file, comp_file, 'comp', feature_type_list, num_of_iter, comp)
+                    main(train_file, test_file, comp_file, 'comp', feature_type_list, num_of_iter, comp,
+                         best_weights_list)
             run_time = (time.time() - start_time) / 60.0
             print("{}: Finish running with num_of_iter: {}. Run time is: {} minutes".
                   format(time.asctime(time.localtime(time.time())), num_of_iter, run_time))

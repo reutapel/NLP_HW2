@@ -271,3 +271,17 @@ class GraphUtil:
             if set(pred_targets) != set(gold_targets):
                 return False
         return True
+
+    @staticmethod
+    def reverse_dict(pred_tree):
+        """
+        :param pred_tree: the prediction tree returned from calculate mst
+        :return: the reverse tree where the key is the target and the value is the head
+        """
+
+        pred_tree_reverse = dict()
+        for head, targets in pred_tree.items():
+            for target in targets:
+                pred_tree_reverse[target] = head
+
+        return pred_tree_reverse
