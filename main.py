@@ -24,9 +24,9 @@ LOG_FILENAME = datetime.now().strftime(os.path.join(directory, 'logs', 'LogFile_
 logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
 
 
-def cross_validation(features_dict, train_file_to_use, test_file_to_use, comp_file_to_use, number_of_iter):
+def cross_validation(features_dict, train_file_to_use, test_file_to_use, comp_file_to_use, number_of_iter,
+                     number_of_sentence_train):
     # Cross validation part 1: split the data to folds
-    number_of_sentence_train = 5
     kf = KFold(n_splits=5, shuffle=True)
     features = list(features_dict.values())
     features = features[0][0]
@@ -72,6 +72,10 @@ def cross_validation(features_dict, train_file_to_use, test_file_to_use, comp_fi
             selected_features.remove(best_candidate)
             remaining_features.remove(best_candidate)
             current_acc = new_acc
+            logging.info('{}: Selected features are: {} and the best accuracy is: {}'.
+                         format((time.asctime(time.localtime(time.time()))), selected_features, new_acc))
+            print('{}: Selected features are: {} and the best accuracy is: {}'.
+                  format((time.asctime(time.localtime(time.time()))), selected_features, new_acc))
 
         else:
             logging.info('{}: No candidate was chosen. Number of selected features is {}.'.
@@ -143,6 +147,8 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
                 with open(os.path.join(weights_directory, weights), 'rb') as fp:
                     weight_vec = pickle.load(fp)
                 weights = weights[:-4]
+                if train_index is not None and weights != 'final_weight_vec_20':
+                    continue
                 accuracy[weights], mistakes_dict_names[weights] = evaluate_obj.calculate_accuracy(weight_vec,
                                                                                                   weights, test_type)
             print('{}: The model hyper parameters and results are: \n num_of_iter: {} \n test file: {} \n'
@@ -186,7 +192,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
-    train_file = os.path.join(base_directory, 'HW2-files', 'train_small.labeled')
+    train_file = os.path.join(base_directory, 'HW2-files', 'train.labeled')
     test_file = os.path.join(base_directory, 'HW2-files', 'test.labeled')
     comp_file = os.path.join(base_directory, 'HW2-files', 'comp.unlabeled')
 
@@ -198,7 +204,6 @@ if __name__ == "__main__":
     basic_features.remove('9')
     basic_features.remove('11')
     basic_features.remove('12')
-    advanced_features = ['1', '2']
     feature_type_dict = {
         'all_features': [advanced_features]}
     # 'basic_model': [basic_features]}
@@ -208,7 +213,10 @@ if __name__ == "__main__":
     comp = False
     use_edges_existed_on_train, use_pos_edges_existed_on_train = True, True
     if cv:
-        cross_validation(feature_type_dict, train_file, test_file, comp_file, number_of_iter=20)
+        # if running with all train data: number_of_sentence_train = 5000, else: put the number ot sentences
+        # you have in the small train you run
+        cross_validation(feature_type_dict, train_file, test_file, comp_file, number_of_iter=20,
+                         number_of_sentence_train=5000)
     else:
         for num_of_iter in num_of_iter_list:
             start_time = time.time()

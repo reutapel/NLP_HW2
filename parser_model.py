@@ -720,9 +720,6 @@ class ParserModel:
         else:
             c_pos_plus_1 = 'end'
 
-        if child_index == 8 and parent_index == 0:
-            reut = 1
-
         # create a list of all POS between the parent and the child
         pos_between = list()
         if parent_index > child_index:
@@ -734,7 +731,7 @@ class ParserModel:
         for index_between in index_list:
             pos_between.append(copy(self.token_POS_dict[mode]['token_POS'][(sentence_index, index_between)]))
 
-        p_c_distance = abs(parent_index - child_index)
+        p_c_distance = abs(parent_index - child_index) - 1
 
         # get the grandparent and brothers index, pos and word
         pos_brothers = list()
@@ -943,14 +940,15 @@ class ParserModel:
         for sentence_index, sentence_tree in self.gold_tree[mode].items():
             self.gold_tree_features_vector[mode][sentence_index] =\
                 self.create_global_feature_vector(sentence_tree, sentence_index, mode)
-
-        print('{}: Finished building feature vectors for gold trees {} in : {} seconds'.
-              format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
-        logging.info('{}: Finished building feature vectors for gold trees {} in : {} seconds'.
-                     format(time.asctime(time.localtime(time.time())), mode, time.time() - start_time))
+        run_time = (time.time() - start_time)/60.0
+        print('{}: Finished building feature vectors for gold trees {} in : {} minutes'.
+              format(time.asctime(time.localtime(time.time())), mode, run_time))
+        logging.info('{}: Finished building feature vectors for gold trees {} in : {} minutes'.
+                     format(time.asctime(time.localtime(time.time())), mode, run_time))
 
         print('{}: Saving feature vectors for gold trees {}'.format(time.asctime(time.localtime(time.time())), mode))
-        logging.info('{}: Saving feature vectors for gold trees {}'.format(time.asctime(time.localtime(time.time())), mode))
+        logging.info('{}: Saving feature vectors for gold trees {}'.format(time.asctime(time.localtime(time.time())),
+                                                                           mode))
         w = csv.writer(open(self.dict_path + 'features_vector_gold_tree_' + mode + '.csv', "w"))
         for key, val in self.gold_tree_features_vector[mode].items():
             w.writerow([key, val])
