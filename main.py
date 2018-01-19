@@ -14,8 +14,8 @@ import pickle
 # open log connection
 sub_dirs = ["logs", "evaluations", "dict", "weights"]
 base_directory = os.path.abspath(os.curdir)
-directory = os.path.join(base_directory, "output", datetime.now().
-                         strftime("advanced_model_5080100_iter_%d_%m_%Y_%H_%M_%S"))
+run_dir = datetime.now().strftime("advanced_model_5080100_iter_%d_%m_%Y_%H_%M_%S")
+directory = os.path.join(base_directory, "output", run_dir)
 for sub_dir in sub_dirs:
     os.makedirs(os.path.join(directory, sub_dir))
 directory += os.sep
@@ -73,7 +73,8 @@ def cross_validation(train_file_for_cv):
             k += 1
 
 
-def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, features_combination_list, num_of_iter, comp):
+def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, features_combination_list, num_of_iter, comp,
+         best_weights_list = None):
 
     # start all combination of features
     for features_combination in features_combination_list:
@@ -107,9 +108,6 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
         logging.info('{}: Finish Perceptron for features : {} and num_of_iter: {}. run time: {} minutes'.
                      format(time.asctime(time.localtime(time.time())), features_combination, num_of_iter, train_run_time))
 
-        # Evaluate the results of the model
-        # write_file_name = datetime.now().strftime(directory + 'evaluations/result_MEMM_basic_model_final__' + test_type +
-        #                                           '%d_%m_%Y_%H_%M.wtag')
         evaluate_obj = Evaluate(parser_model_obj, perceptron_obj, directory)
         best_weights_name = str()
         if test_type != 'comp':
@@ -131,8 +129,10 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
                          '\n train file: {} \n test type: {} \n features combination list: {} \n accuracy: {} \n'
                          'mistakes dict name: {}'
                          .format(time.asctime(time.localtime(time.time())), num_of_iter, test_file_to_use,
-                                 train_file_to_use, test_type, features_combination_list, accuracy[weights], mistakes_dict_names[weights]))
+                                 train_file_to_use, test_type, features_combination_list, accuracy[weights],
+                                 mistakes_dict_names[weights]))
 
+            # get the weights that gave the best accuracy and save as best weights
             best_weights = max(accuracy, key=accuracy.get)
             with open(weights_directory + '\\' + best_weights + '.pkl', 'rb') as fp:
                 best_weights_vec = pickle.load(fp)
@@ -140,17 +140,22 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
             with open(best_weights_name, 'wb') as f:
                 pickle.dump(best_weights_vec, f)
 
-        if test_type == 'comp':
-            with open(best_weights_name, 'rb') as fp:
-                best_weights_vec = pickle.load(fp)
-            inference_file_name = evaluate_obj.infer(best_weights_vec,best_weights_name, test_type)
-            print('{}: The inferred file name is: {} for best weights: {}'.format(time.asctime(time.localtime
-                                                                                               (time.time())),
-                                                                                  inference_file_name, best_weights_name ))
-            logging.info('{}: The inferred file name is: {} for best weights: {}'.format(time.asctime(
-                time.localtime(time.time())), inference_file_name, best_weights_name))
+            logging.info('{}: best weights for {}, {}, {}, with accuracy {}, name is: {} '
+                         .format(time.asctime(time.localtime(time.time())), num_of_iter, test_type,
+                                 features_combination_list, accuracy[best_weights],best_weights_name))
+            print('{}: best weights for {}, {}, {}, with accuracy {}, name is: {} '
+                         .format(time.asctime(time.localtime(time.time())), num_of_iter, test_type,
+                                 features_combination_list, accuracy[best_weights], best_weights_name))
+    if comp:
+        for best_weights_vec_loaded in best_weights_list:
+            inference_file_name = evaluate_obj.infer(best_weights_vec_loaded, test_type)
+            print('{}: The inferred file name is: {} for weights: {} '.format(time.asctime(time.localtime
+                                                                                           (time.time())),
+                                                                              inference_file_name, best_weights_vec_loaded))
+            logging.info('{}: The inferred file name is: {} for weights: {} '.format(time.asctime(
+                time.localtime(time.time())), inference_file_name, best_weights_vec_loaded))
 
-        logging.info('-----------------------------------------------------------------------------------')
+    logging.info('-----------------------------------------------------------------------------------')
 
 
 if __name__ == "__main__":
@@ -158,9 +163,15 @@ if __name__ == "__main__":
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     train_file = os.path.join(base_directory, 'HW2-files', 'train_small.labeled')
     test_file = os.path.join(base_directory, 'HW2-files', 'test_small.labeled')
-    comp_file = os.path.join(base_directory, 'HW2-files', 'comp.unlabeled')
+    comp_file = os.path.join(base_directory, 'HW2-files', 'comp_small.unlabeled')
+    # change name to chosen weights
+    best_weights_vec_loaded_basic = os.path.join(base_directory, 'output', 'advanced_model_5080100_iter_19_01_2018_15_08_00',
+                                           'weights', 'best_weights_final_weight_vec_100.pkl')
+    best_weights_vec_loaded_advanced = os.path.join(base_directory, 'output', 'advanced_model_5080100_iter_19_01_2018_15_08_00',
+                                           'weights', 'best_weights_final_weight_vec_80.pkl')
+    best_weights_list = [best_weights_vec_loaded_basic, best_weights_vec_loaded_advanced]
     cv = False
-    comp = False
+    comp = True
     if cv:
         cross_validation(train_file)
     else:
@@ -184,7 +195,8 @@ if __name__ == "__main__":
                     main(train_file, test_file, comp_file, 'test', feature_type_list, num_of_iter, comp)
             else:
                 for feature_type_name, feature_type_list in feature_type_dict.items():
-                    main(train_file, test_file, comp_file, 'comp', feature_type_list, num_of_iter, comp)
+                    main(train_file, test_file, comp_file, 'comp', feature_type_list, num_of_iter, comp,
+                         best_weights_list)
             run_time = (time.time() - start_time) / 60.0
             print("{}: Finish running with num_of_iter: {}. Run time is: {} minutes".
                   format(time.asctime(time.localtime(time.time())), num_of_iter, run_time))

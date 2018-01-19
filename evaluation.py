@@ -1,14 +1,12 @@
 import csv
-import itertools
 import logging
 import time
 import os
 from copy import copy
-import pandas as pd
-from os import listdir
-from os.path import isfile, join
 import pickle
-
+from struct_perceptron import GraphUtil
+import pandas as pd
+import numpy as np
 
 class Evaluate:
 
@@ -132,49 +130,46 @@ class Evaluate:
 
         return accuracy, mistakes_dict_name
 
-    def reverse_dict(self, pred_tree):
-        """
-        :param pred_tree: the prediction tree returned from calculate mst
-        :return: the reverse tree where the key is the target and the value is the head
-        """
-
-        pred_tree_reverse = {}
-        for head, targets in pred_tree:
-            for target in targets:
-                pred_tree_reverse[target] = head
-
-        return pred_tree_reverse
-
-    # TODO: test function
-    def infer(self,best_weights_vec, best_weights, inference_mode=None):
+    def infer(self, best_weights_vec_loaded, inference_mode=None):
 
         """
         this method uses the inference object in order to create the predictions file
         :param inference_mode: for updates the class variables to the correct work mode
         """
 
+        with open(best_weights_vec_loaded, 'rb') as fp:
+            best_weights_vec = pickle.load(fp)
+
         # change relevant class variables
         self.update_inference_mode(inference_mode, best_weights_vec)
-        #for sentence_index in range(len(self.gold_tree)):
-        #sentence_index = len(self.gold_tree)
+
+        # create object of the GraphUtils
+        graph_utils = GraphUtil()
         sentence_index = -1
         pred_tree = dict()
         pred_tree_reverse = dict()
+        data_local = copy(self.data)
+        data_columns = list(data_local)
+        data_new = pd.DataFrame(columns = data_columns)
+        prev_idx = 0
         for index, row in self.data.iterrows():
             if row['token_counter'] == 1:
                 sentence_index += 1
                 pred_tree = self.inference_obj.calculate_mst(sentence_index)
-                pred_tree_reverse = self.reverse_dict(pred_tree)
-            row['token_head'] = pred_tree_reverse[row['token_counter']]
-
-        # delete additional column for comp format
-        if inference_mode == 'comp':
-            self.data = self.data.drop('sentence_index',1)
-
+                pred_tree_reverse = graph_utils.reverse_dict(pred_tree)
+            data_local.loc[index,'token_head'] = pred_tree_reverse[row['token_counter']]
+            sen_idx = row['sentence_index']
+            if sen_idx == prev_idx + 1:
+                #TODO: add empty row between index-1 to index
+                data_new = data_new.append(pd.Series(), ignore_index=True)
+            prev_idx = sen_idx
+            data_new = data_new.append(data_local.loc[index])
+        data_local = data_local.drop('sentence_index', 1)
+        data_new = data_new.drop('sentence_index', 1)
         # save to file
-        saved_file_name = 'inference file for mode:{} - {} and best weights: {}'.format(inference_mode,
-                          time.asctime(time.localtime(time.time())), best_weights)
-        self.data.to_csv(saved_file_name,sep='\t', header=False)
+        saved_file_name = 'inference file for weights_{}'.format(best_weights_vec_loaded[-93:-4])
+        saved_file_name = saved_file_name.replace('\\','_')
+        data_new.to_csv(saved_file_name + '.unlabeled',index=False, sep='\t', header=False)
 
         return saved_file_name
 
