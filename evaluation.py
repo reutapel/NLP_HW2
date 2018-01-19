@@ -71,82 +71,66 @@ class Evaluate:
         self.inference_obj.inference_mode(self.inference_mode,weight_vec)
         return
 
-    def calculate_accuracy(self, inference_mode=None):
+    def calculate_accuracy(self, weight_vec, weights, inference_mode=None,):
 
         """
         this method calculates the accuracy of the prediction according to the gold tree on /train test
         :param inference_mode: for updates the class variables to the correct work mode
-        :return:
+        :return: accuracy on the data set
         """
-        #
-        # if inference_mode == 'comp':
-        #     print('can not calculate accuracy for non train/test mode')
-        #     logging.info('can not calculate accuracy for non train/test mode')
-        #     return
+
+        if inference_mode == 'comp':
+            print('can not calculate accuracy for non train/test mode')
+            logging.info('can not calculate accuracy for non train/test mode')
+            return
 
         # change relevant class variables of this class and the learning model class
-        weights_directory = os.path.join(self.dir, 'weights')
-        weight_file_names = [f for f in listdir(weights_directory) if isfile(join(weights_directory, f))]
-        accuracy = dict()
-        mistakes_dict_names = dict()
-        for weights in weight_file_names:
-            with open(weights_directory + '\\' + weights, 'rb') as fp:
-                weight_vec = pickle.load(fp)
-            self.update_inference_mode(inference_mode, weight_vec)
-            weights = weights[:-4]
-            data_mistake_num = 0
-            data_num_tokens = len(self.token_POS_dict['token'].keys())
-            sentences_count = 0
-            mistakes_dict = dict()
+        self.update_inference_mode(inference_mode, weight_vec)
 
-            print('{}: Start calculating accuracy for weights: {}'.format(time.asctime(time.localtime(time.time())),
-                                                                          weights))
-            logging.info('{}: Start calculating accuracy for weights: {}'.format(time.asctime(time.localtime
-                                                                                              (time.time())), weights))
-            for t in range(len(self.gold_tree)):
-                sentence_mistake_num = 0
-                gold_sentence = self.gold_tree[t]
-                try:
-                    pred_tree = self.inference_obj.calculate_mst(t)
-                except AssertionError as err:
-                    pred_tree = err.args
-                    print("The algorithm returned a bad tree, continuing with accuracy. \n tree: {}".format(pred_tree))
-                    logging.error("The algorithm returned a bad tree, continuing with accuracy. \n tree: {}".format(pred_tree))
-                finally:
-                    for source, targets in gold_sentence.items():
-                        missed_targets = set(targets).difference(set(pred_tree[source]))
-                        wrong_targets = set(pred_tree[source]).difference(set(targets))
-                        data_mistake_num += len(missed_targets)
-                        sentence_mistake_num += len(missed_targets)
-                        if t not in mistakes_dict.keys():
-                            mistakes_dict[t] = dict()
-                            mistakes_dict[t][source] = dict()
-                            mistakes_dict[t][source]['missed_targets'] = missed_targets
-                            mistakes_dict[t][source]['wrong_targets'] = wrong_targets
-                        else:
-                            mistakes_dict[t][source] = dict()
-                            mistakes_dict[t][source]['missed_targets'] = missed_targets
-                            mistakes_dict[t][source]['wrong_targets'] = wrong_targets
-                    sentences_count += 1
-            accuracy[weights] = 1 - data_mistake_num / (data_num_tokens - sentences_count)
+        data_mistake_num = 0
+        data_num_tokens = len(self.token_POS_dict['token'].keys())
+        sentences_count = 0
+        mistakes_dict = dict()
+        print('{}: Start calculating accuracy for weights: {}'.format(time.asctime(time.localtime(time.time())),
+                                                                      weights))
+        logging.info('{}: Start calculating accuracy for weights: {}'.format(time.asctime(time.localtime
+                                                                                          (time.time())), weights))
+        for t in range(len(self.gold_tree)):
+            sentence_mistake_num = 0
+            gold_sentence = self.gold_tree[t]
+            pred_tree = self.inference_obj.calculate_mst(t)
+            for source, targets in gold_sentence.items():
+                missed_targets = set(targets).difference(set(pred_tree[source]))
+                wrong_targets = set(pred_tree[source]).difference(set(targets))
+                data_mistake_num += len(missed_targets)
+                sentence_mistake_num += len(missed_targets)
+                if t not in mistakes_dict.keys():
+                    mistakes_dict[t] = dict()
+                    mistakes_dict[t][source] = dict()
+                    mistakes_dict[t][source]['missed_targets'] = missed_targets
+                    mistakes_dict[t][source]['wrong_targets'] = wrong_targets
+                else:
+                    mistakes_dict[t][source] = dict()
+                    mistakes_dict[t][source]['missed_targets'] = missed_targets
+                    mistakes_dict[t][source]['wrong_targets'] = wrong_targets
+            sentences_count += 1
+        accuracy = 1 - data_mistake_num / (data_num_tokens - sentences_count)
 
-            self.analyzer(mistakes_dict, inference_mode, accuracy[weights])
-            logging.info('{}: Accuracy for mode {} and weights: {} is : {:%} '.format(time.asctime(time.localtime(time.time())),
-                                                                 self.inference_mode, weights,  accuracy[weights]))
-            print('{}: Accuracy for mode {} and weights: {} is : {:%} '.format(time.asctime(time.localtime(time.time())),
-                                                                 self.inference_mode, weights,  accuracy[weights]))
+        self.analyzer(mistakes_dict, inference_mode, accuracy ,weights)
+        logging.info('{}: Accuracy for mode {} and weights: {} is : {:%} '.format(time.asctime(time.localtime(time.time())),
+                                                             self.inference_mode, weights, accuracy))
+        print('{}: Accuracy for mode {} and weights: {} is : {:%} '.format(time.asctime(time.localtime(time.time())),
+                                                             self.inference_mode, weights, accuracy))
+        print('{}: saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
+        mistakes_dict_name = 'weights_{}_accuracy_{}_mistakes_dict_{}'.format(weights, accuracy, self.inference_mode)
+        w = csv.writer(open(os.path.join(self.directory, "{}.csv".format(mistakes_dict_name)), "w"))
+        for key, val in mistakes_dict.items():
+            w.writerow([key, val])
+        print('{}: finished saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
+        logging.info('{}: finished saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
 
-            print('{}: saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
-            logging.info('{}: saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
-            mistakes_dict_name = 'weights_{}_accuracy_{}_mistakes_dict_{}'.format(weights, accuracy[weights], self.inference_mode)
-            mistakes_dict_names[weights] = mistakes_dict_name
-            w = csv.writer(open(os.path.join(self.directory, "{}.csv".format(mistakes_dict_name)), "w"))
-            for key, val in mistakes_dict.items():
-                w.writerow([key, val])
-            print('{}: finished saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
-            logging.info('{}: finished saving mistakes_dict'.format(time.asctime(time.localtime(time.time()))))
-
-        return accuracy, mistakes_dict_names, weight_file_names
+        return accuracy, mistakes_dict_name
 
     def reverse_dict(self, pred_tree):
         """
@@ -162,7 +146,7 @@ class Evaluate:
         return pred_tree_reverse
 
     # TODO: test function
-    def infer(self, inference_mode=None):
+    def infer(self,best_weights_vec, best_weights, inference_mode=None):
 
         """
         this method uses the inference object in order to create the predictions file
@@ -170,7 +154,7 @@ class Evaluate:
         """
 
         # change relevant class variables
-        self.update_inference_mode(inference_mode)
+        self.update_inference_mode(inference_mode, best_weights_vec)
         #for sentence_index in range(len(self.gold_tree)):
         #sentence_index = len(self.gold_tree)
         sentence_index = -1
@@ -179,14 +163,8 @@ class Evaluate:
         for index, row in self.data.iterrows():
             if row['token_counter'] == 1:
                 sentence_index += 1
-                try:
-                    pred_tree = self.inference_obj.calculate_mst(sentence_index)
-                except AssertionError as err:
-                    pred_tree = err.args
-                    print("The algorithm returned a bad tree, continuing with inference. \n tree: {}".format(pred_tree))
-                    logging.error("The algorithm returned a bad tree, continuing with inference. \n tree: {}".format(pred_tree))
-                finally:
-                    pred_tree_reverse = self.reverse_dict(pred_tree)
+                pred_tree = self.inference_obj.calculate_mst(sentence_index)
+                pred_tree_reverse = self.reverse_dict(pred_tree)
             row['token_head'] = pred_tree_reverse[row['token_counter']]
 
         # delete additional column for comp format
@@ -194,13 +172,13 @@ class Evaluate:
             self.data = self.data.drop('sentence_index',1)
 
         # save to file
-        saved_file_name = 'inference file for mode:{} - {}'.format(inference_mode,
-                          time.asctime(time.localtime(time.time())))
+        saved_file_name = 'inference file for mode:{} - {} and best weights: {}'.format(inference_mode,
+                          time.asctime(time.localtime(time.time())), best_weights)
         self.data.to_csv(saved_file_name,sep='\t', header=False)
 
         return saved_file_name
 
-    def analyzer(self, mistakes_dict, inference_mode, accuracy):
+    def analyzer(self, mistakes_dict, inference_mode, accuracy, weights):
         """
         this method analyzes the mistakes of the prediction
         :param mistakes_dict: the dict that contains the missed and wrong predictions
@@ -209,8 +187,10 @@ class Evaluate:
         """
 
         # reversing dict for easier analysis
-        print('{}: starting analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
-        logging.info('{}: starting analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
+        print('{}: starting analyzing mistakes for weights: {}'.format(time.asctime(time.localtime(time.time())),
+                                                                       weights))
+        logging.info('{}: starting analyzing mistakes for weights: {}'.format(time.asctime(time.localtime(time.time())),
+                                                                              weights))
         analysis_dict = dict()
         for t in mistakes_dict.keys():
             analysis_dict[t] = dict()
@@ -244,12 +224,14 @@ class Evaluate:
                     confusion_POS[(self.token_POS_dict['token_POS'][t, missed_source],
                                    self.token_POS_dict['token_POS'][t, wrong_source])] = 1
 
-        print('{}: finished analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
-        logging.info('{}: finished analyzing mistakes'.format(time.asctime(time.localtime(time.time()))))
+        print('{}: finished analyzing mistakes for weights: {}'.format(time.asctime(time.localtime(time.time()))
+                                                                       , weights))
+        logging.info('{}: finished analyzing mistakes for weights: {}'.format(time.asctime(time.localtime(time.time()))
+                                                                              , weights))
 
         print('{}: saving confusion_POS'.format(time.asctime(time.localtime(time.time()))))
         logging.info('{}: saving confusion_POS'.format(time.asctime(time.localtime(time.time()))))
-        confusion_POS_name = 'confusion_POS_{}_acc_{}'.format(inference_mode,accuracy)
+        confusion_POS_name = 'confusion_POS_{}_acc_{}_{}'.format(inference_mode,accuracy, weights)
         w = csv.writer(open(os.path.join(self.directory, "{}.csv".format(confusion_POS_name)),"w"))
         for key, val in confusion_POS.items():
             w.writerow([key, val])
