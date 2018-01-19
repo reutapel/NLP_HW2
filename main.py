@@ -8,9 +8,6 @@ from struct_perceptron import StructPerceptron
 from parser_model import ParserModel
 from evaluation import Evaluate
 from copy import copy
-from os import listdir
-from os.path import isfile, join
-import pickle
 
 # open log connection
 sub_dirs = ["logs", "evaluations", "dict", "weights"]
@@ -26,7 +23,7 @@ logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
 
 def cross_validation(features_dict, train_file_to_use, test_file_to_use, comp_file_to_use, number_of_iter):
     # Cross validation part 1: split the data to folds
-    number_of_sentence_train = 5000
+    number_of_sentence_train = 5
     kf = KFold(n_splits=5, shuffle=True)
     features = list(features_dict.values())
     features = features[0][0]
@@ -133,46 +130,49 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
         # write_file_name = datetime.now().strftime(directory + 'evaluations/result_MEMM_basic_model_final__' +
         # test_type + '%d_%m_%Y_%H_%M.wtag')
         evaluate_obj = Evaluate(parser_model_obj, perceptron_obj, directory)
-        best_weights_name = str()
-        if test_type != 'comp':
-            weights_directory = os.path.join(directory, 'weights')
-            weight_file_names = [f for f in listdir(weights_directory) if isfile(join(weights_directory, f))]
-            accuracy = dict()
-            mistakes_dict_names = dict()
-            for weights in weight_file_names:
-                with open(weights_directory + '\\' + weights, 'rb') as fp:
-                    weight_vec = pickle.load(fp)
-                weights = weights[:-4]
-                accuracy[weights], mistakes_dict_names[weights] = evaluate_obj.calculate_accuracy(weight_vec,
-                                                                                                  weights, test_type)
-            print('{}: The model hyper parameters and results are: \n num_of_iter: {} \n test file: {} \n train file: {} '
-                  '\n test type: {} \n features combination list: {} \n accuracy: {:%} \n mistakes dict name: {}'
-                  .format(time.asctime(time.localtime(time.time())), num_of_iter, test_file_to_use, train_file_to_use,
-                          test_type, features_combination_list, accuracy[weights], mistakes_dict_names[weights]))
-            logging.info('{}: The model hyper parameters and results are: \n num_of_iter: {} \n test file: {}'
-                         '\n train file: {} \n test type: {} \n features combination list: {} \n accuracy: {} \n'
-                         'mistakes dict name: {}'
-                         .format(time.asctime(time.localtime(time.time())), num_of_iter, test_file_to_use,
-                                 train_file_to_use, test_type, features_combination_list, accuracy[weights], mistakes_dict_names[weights]))
 
-            best_weights = max(accuracy, key=accuracy.get)
-            with open(weights_directory + '\\' + best_weights + '.pkl', 'rb') as fp:
-                best_weights_vec = pickle.load(fp)
-            best_weights_name = weights_directory + '\\' + "best_weights_" + best_weights + '.pkl'
-            with open(best_weights_name, 'wb') as f:
-                pickle.dump(best_weights_vec, f)
+        if test_type != 'comp':
+            accuracy, mistakes_dict_name = evaluate_obj.calculate_accuracy(test_type)
+
+        print('{}: The model hyper parameters and results are: \n num_of_iter: {} \n test file: {} \n train file: {} '
+              '\n test type: {} \n features combination list: {} \n accuracy: {:%} \n mistakes dict name: {}'
+              .format(time.asctime(time.localtime(time.time())), number_of_iter, test_file_to_use, train_file_to_use,
+                      test_type, features_combination_list, accuracy, mistakes_dict_name))
+        logging.info('{}: The model hyper parameters and results are: \n num_of_iter: {} \n test file: {}'
+                     '\n train file: {} \n test type: {} \n features combination list: {} \n accuracy: {} \n'
+                     'mistakes dict name: {}'
+                     .format(time.asctime(time.localtime(time.time())), number_of_iter, test_file_to_use,
+                             train_file_to_use, test_type, features_combination_list, accuracy, mistakes_dict_name))
 
         if test_type == 'comp':
-            with open(best_weights_name, 'rb') as fp:
-                best_weights_vec = pickle.load(fp)
-            inference_file_name = evaluate_obj.infer(best_weights_vec,best_weights_name, test_type)
-            print('{}: The inferred file name is: {} for best weights: {}'.format(time.asctime(time.localtime
-                                                                                               (time.time())),
-                                                                                  inference_file_name, best_weights_name ))
-            logging.info('{}: The inferred file name is: {} for best weights: {}'.format(time.asctime(
-                time.localtime(time.time())), inference_file_name, best_weights_name))
+            inference_file_name = evaluate_obj.infer(test_type)
+            print('{}: The inferred file name is: {}'.format(time.asctime(time.localtime(time.time())),
+                                                             inference_file_name))
+            logging.info('{}: The inferred file name is: {}'.format(time.asctime(time.localtime(time.time())),
+                                                                    inference_file_name))
 
-        logging.info('-----------------------------------------------------------------------------------')
+        # if not comp:
+        #     word_results_dictionary = evaluate_class.run()
+        # if comp:
+        #     evaluate_class.write_result_doc()
+        # logging.info('{}: The model hyper parameters: \n num_of_iter:{} \n test file: {} \n train file: {}'
+        #              .format(time.asctime(time.localtime(time.time())), num_of_iter, test_file_to_use,
+        #                      train_file_to_use))
+        # logging.info('{}: Related results files are: \n {}'.format(time.asctime(time.localtime(time.time())),
+        #                                                            write_file_name))
+        #
+        # # print(word_results_dictionary)
+        # summary_file_name = '{0}analysis/summary_{1}_{2.day}_{2.month}_{2.year}_{2.hour}_{2.minute}.csv' \
+        #     .format(directory, test_type, datetime.now())
+        # evaluate_class.create_summary_file(num_of_iter, features_combination, test_file_to_use, train_file_to_use,
+        #                                    summary_file_name, perceptron_obj, comp)
+        #
+        # logging.info('{}: Following Evaluation results for features {}'.
+        #              format(time.asctime(time.localtime(time.time())), features_combination))
+        # if not comp:
+        #     logging.info('{}: Evaluation results are: \n {} \n'.format(time.asctime(time.localtime(time.time())),
+        #                                                                word_results_dictionary))
+        # logging.info('-----------------------------------------------------------------------------------')
 
         return accuracy
 
@@ -180,7 +180,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
-    train_file = os.path.join(base_directory, 'HW2-files', 'train.labeled')
+    train_file = os.path.join(base_directory, 'HW2-files', 'train_small.labeled')
     test_file = os.path.join(base_directory, 'HW2-files', 'test.labeled')
     comp_file = os.path.join(base_directory, 'HW2-files', 'comp.unlabeled')
 
@@ -192,11 +192,11 @@ if __name__ == "__main__":
     basic_features.remove('9')
     basic_features.remove('11')
     basic_features.remove('12')
+    advanced_features = ['1', '2']
     feature_type_dict = {
         'all_features': [advanced_features]}
     # 'basic_model': [basic_features]}
 
-        num_of_iter_list = [100]
     cv = True
     comp = False
     use_edges_existed_on_train, use_pos_edges_existed_on_train = True, True
