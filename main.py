@@ -7,12 +7,13 @@ from datetime import datetime
 from struct_perceptron import StructPerceptron
 from parser_model import ParserModel
 from evaluation import Evaluate
+from copy import copy
 
 # open log connection
 sub_dirs = ["logs", "evaluations", "dict", "weights"]
 base_directory = os.path.abspath(os.curdir)
 directory = os.path.join(base_directory, "output", datetime.now().
-                         strftime("advanced_model_5080100_iter_%d_%m_%Y_%H_%M_%S"))
+                         strftime("select_features_cv_%d_%m_%Y_%H_%M_%S"))
 for sub_dir in sub_dirs:
     os.makedirs(os.path.join(directory, sub_dir))
 directory += os.sep
@@ -20,57 +21,76 @@ LOG_FILENAME = datetime.now().strftime(os.path.join(directory, 'logs', 'LogFile_
 logging.basicConfig(filename=LOG_FILENAME, level=logging.INFO)
 
 
-def cross_validation(train_file_for_cv):
+def cross_validation(features_dict, train_file_to_use, test_file_to_use, comp_file_to_use, number_of_iter):
     # Cross validation part 1: split the data to folds
-    text_file = open(train_file_for_cv, 'r')
-    train_data = text_file.read().split('\n')
+    number_of_sentence_train = 5000
     kf = KFold(n_splits=5, shuffle=True)
+    features = list(features_dict.values())
+    features = features[0][0]
 
-    lambda_list = [100.0]
-    for lamda in lambda_list:
-        CV_start_time = time.time()
-        logging.info('{}: Start running 5-fold CV for lambda: {}'.format(time.asctime(time.localtime(time.time())),
-                                                                          lamda))
-        print('{}: Start running 5-fold CV for lambda: {}'.format(time.asctime(time.localtime(time.time())), lamda))
-        k = 0
+    cv_start_time = time.time()
+    logging.info('{}: Start running 5-fold CV'.format(time.asctime(time.localtime(time.time()))))
+    print('{}: Start running 5-fold CV'.format(time.asctime(time.localtime(time.time()))))
 
-        for train_index, test_index in kf.split(train_data):
-            # Create the train and test data according to the folds, and save the new data
-            train_k_fold = list(train_data[i] for i in train_index)
-            test_k_fold = list(train_data[i] for i in test_index)
-            train_file_cv = datetime.now().strftime(directory + 'data/train_cv_file_%d_%m_%Y_%H_%M.wtag')
-            test_file_cv = datetime.now().strftime(directory + 'data/test_cv_file_%d_%m_%Y_%H_%M.wtag')
-            with open(train_file_cv, 'w', newline='\n') as file:
-                for sentence in train_k_fold:
-                    file.write(str(sentence) + '\n')
-            with open(test_file_cv, 'w', newline='\n') as file:
-                for sentence in test_k_fold:
-                    file.write(str(sentence) + '\n')
+    selected_features = copy(features)
+    remaining_features = copy(features)
+    current_acc, new_acc = 0.0, 0.0
+    remain_number_of_candidate = len(remaining_features)
+    while remaining_features and current_acc == new_acc and remain_number_of_candidate > 1:
+        acc_with_candidates = list()
+        for candidate in remaining_features:
+            features_to_run = copy(remaining_features)
+            features_to_run.remove(candidate)
+            k = 0
+            candidate_acc_list = list()
 
-            advanced_features = range(1, 19)
-            advanced_features = [str(i) for i in advanced_features]
-            basic_features = range(1, 14)
-            basic_features = [str(i) for i in basic_features]
-            feature_type_dict_cv = {
-                'all_features': [advanced_features],
-                'basic_model': [basic_features]}
+            for train_index, test_index in kf.split(range(number_of_sentence_train)):
+                logging.info('{}: Start running fold number {}'.format(time.asctime(time.localtime(time.time())), k))
+                print('{}: Start running fold number {}'.format(time.asctime(time.localtime(time.time())), k))
+                accuracy = main(train_file_to_use, test_file_to_use, comp_file_to_use, 'test',
+                                [features_to_run], number_of_iter, comp=False, train_index=train_index,
+                                test_index=test_index)
+                candidate_acc_list.append(accuracy)
 
-            for feature_type_name_cv, feature_type_list_cv in feature_type_dict_cv.items():
-                logging.info('{}: Start running fold number {} for lambda: {}'.
-                             format(time.asctime(time.localtime(time.time())), k, lamda))
-                print('{}: Start running fold number {} for lambda: {}'
-                      .format(time.asctime(time.localtime(time.time())), k, lamda))
-                main(train_file_cv, test_file_cv, 'test_cv_fold_' + str(k), feature_type_list_cv, lamda, comp=False)
+                run_time_cv = (time.time() - cv_start_time) / 60.0
+                print("{}: Finish running iteration {} of 5-fold CV. Run time is: {} minutes".
+                      format(time.asctime(time.localtime(time.time())), k, run_time_cv))
+                logging.info('{}: Finish running iteration {} 5-fold CV. Run time is: {} minutes'.
+                             format(time.asctime(time.localtime(time.time())), k, run_time_cv))
+                k += 1
+            # the average accuracy of the CV for the features we test
+            acc_with_candidates.append((sum(candidate_acc_list)/float(len(candidate_acc_list)), candidate))
 
-            run_time_cv = (time.time() - CV_start_time) / 60.0
-            print("{}: Finish running iteration {} of 10-fold CV for lambda: {}. Run time is: {} minutes".
-                  format(time.asctime(time.localtime(time.time())), k, lamda, run_time_cv))
-            logging.info('{}: Finish running iteration {} 10-fold CV for lambda:{} . Run time is: {} minutes'.
-                         format(time.asctime(time.localtime(time.time())), k, lamda, run_time_cv))
-            k += 1
+        # after testing all possible candidate we want to remove - find the one that the model without it got the
+        # highest accuracy
+        acc_with_candidates.sort()
+        new_acc, best_candidate = acc_with_candidates.pop()
+        if current_acc <= new_acc:
+            selected_features.remove(best_candidate)
+            remaining_features.remove(best_candidate)
+            current_acc = new_acc
+
+        else:
+            logging.info('{}: No candidate was chosen. Number of selected features is {}.'.
+                         format((time.asctime(time.localtime(time.time()))), len(selected_features)))
+            print('{}: No candidate was chosen. Number of selected features is {}.'.
+                  format((time.asctime(time.localtime(time.time()))), len(selected_features)))
+            logging.info('{}: Selected features are: {} and the best accuracy is: {}'.
+                         format((time.asctime(time.localtime(time.time()))), selected_features, new_acc))
+            print('{}: Selected features are: {} and the best accuracy is: {}'.
+                  format((time.asctime(time.localtime(time.time()))), selected_features, new_acc))
+
+        # one candidate can be chosen, if not- we go to the next step.
+        remain_number_of_candidate -= 1
+
+    logging.info('{}: Selected features are: {} and the best accuracy is: {}'.
+                 format((time.asctime(time.localtime(time.time()))), selected_features, new_acc))
+    print('{}: Selected features are: {} and the best accuracy is: {}'.
+          format((time.asctime(time.localtime(time.time()))), selected_features, new_acc))
 
 
-def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, features_combination_list, num_of_iter, comp):
+def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, features_combination_list, number_of_iter,
+         comp, train_index=None, test_index=None):
 
     # start all combination of features
     for features_combination in features_combination_list:
@@ -81,7 +101,8 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
                                                                                 features_combination))
         train_start_time = time.time()
         parser_model_obj = ParserModel(directory, train_file_to_use, test_file_to_use, comp_file_to_use,
-                                       features_combination)
+                                       features_combination, use_edges_existed_on_train, use_pos_edges_existed_on_train,
+                                       train_index=train_index, test_index=test_index)
 
         model_finish_time = time.time()
         model_run_time = (model_finish_time - train_start_time) / 60.0
@@ -92,21 +113,22 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 
         # Run perceptron to learn the best weights
         print('{}: Start Perceptron for features : {} and number of iterations: {}'.
-              format(time.asctime(time.localtime(time.time())), features_combination, num_of_iter))
+              format(time.asctime(time.localtime(time.time())), features_combination, number_of_iter))
         logging.info('{}: Start Perceptron for features : {} and number of iterations: {}'.
-                     format(time.asctime(time.localtime(time.time())), features_combination, num_of_iter))
+                     format(time.asctime(time.localtime(time.time())), features_combination, number_of_iter))
         perceptron_obj = StructPerceptron(model=parser_model_obj, directory=directory)
-        weights = perceptron_obj.perceptron(num_of_iter=num_of_iter)
+        weights = perceptron_obj.perceptron(num_of_iter=number_of_iter)
 
         train_run_time = (time.time() - model_finish_time) / 60.0
         print('{}: Finish Perceptron for features : {} and num_of_iter: {}. run time: {} minutes'.
-              format(time.asctime(time.localtime(time.time())), features_combination, num_of_iter, train_run_time))
+              format(time.asctime(time.localtime(time.time())), features_combination, number_of_iter, train_run_time))
         logging.info('{}: Finish Perceptron for features : {} and num_of_iter: {}. run time: {} minutes'.
-                     format(time.asctime(time.localtime(time.time())), features_combination, num_of_iter, train_run_time))
+                     format(time.asctime(time.localtime(time.time())), features_combination, number_of_iter,
+                            train_run_time))
 
         # Evaluate the results of the model
-        # write_file_name = datetime.now().strftime(directory + 'evaluations/result_MEMM_basic_model_final__' + test_type +
-        #                                           '%d_%m_%Y_%H_%M.wtag')
+        # write_file_name = datetime.now().strftime(directory + 'evaluations/result_MEMM_basic_model_final__' +
+        # test_type + '%d_%m_%Y_%H_%M.wtag')
         evaluate_obj = Evaluate(parser_model_obj, perceptron_obj, directory)
 
         if test_type != 'comp':
@@ -114,18 +136,20 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 
         print('{}: The model hyper parameters and results are: \n num_of_iter: {} \n test file: {} \n train file: {} '
               '\n test type: {} \n features combination list: {} \n accuracy: {:%} \n mistakes dict name: {}'
-              .format(time.asctime(time.localtime(time.time())), num_of_iter, test_file_to_use, train_file_to_use,
+              .format(time.asctime(time.localtime(time.time())), number_of_iter, test_file_to_use, train_file_to_use,
                       test_type, features_combination_list, accuracy, mistakes_dict_name))
         logging.info('{}: The model hyper parameters and results are: \n num_of_iter: {} \n test file: {}'
                      '\n train file: {} \n test type: {} \n features combination list: {} \n accuracy: {} \n'
                      'mistakes dict name: {}'
-                     .format(time.asctime(time.localtime(time.time())), num_of_iter, test_file_to_use,
+                     .format(time.asctime(time.localtime(time.time())), number_of_iter, test_file_to_use,
                              train_file_to_use, test_type, features_combination_list, accuracy, mistakes_dict_name))
 
         if test_type == 'comp':
             inference_file_name = evaluate_obj.infer(test_type)
-            print('{}: The inferred file name is: {}'.format(time.asctime(time.localtime(time.time())), inference_file_name))
-            logging.info('{}: The inferred file name is: {}'.format(time.asctime(time.localtime(time.time())), inference_file_name))
+            print('{}: The inferred file name is: {}'.format(time.asctime(time.localtime(time.time())),
+                                                             inference_file_name))
+            logging.info('{}: The inferred file name is: {}'.format(time.asctime(time.localtime(time.time())),
+                                                                    inference_file_name))
 
         # if not comp:
         #     word_results_dictionary = evaluate_class.run()
@@ -150,31 +174,35 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
         #                                                                word_results_dictionary))
         # logging.info('-----------------------------------------------------------------------------------')
 
+        return accuracy
+
 
 if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
-    train_file = os.path.join(base_directory, 'HW2-files', 'train_small.labeled')
-    test_file = os.path.join(base_directory, 'HW2-files', 'test_small.labeled')
+    train_file = os.path.join(base_directory, 'HW2-files', 'train.labeled')
+    test_file = os.path.join(base_directory, 'HW2-files', 'test.labeled')
     comp_file = os.path.join(base_directory, 'HW2-files', 'comp.unlabeled')
-    cv = False
-    comp = False
-    if cv:
-        cross_validation(train_file)
-    else:
-        advanced_features = range(1, 27)
-        advanced_features = [str(i) for i in advanced_features]
-        basic_features = range(1, 14)
-        basic_features = [str(i) for i in basic_features]
-        basic_features.remove('7')
-        basic_features.remove('9')
-        basic_features.remove('11')
-        basic_features.remove('12')
-        feature_type_dict = {
-            'all_features': [advanced_features]}
-            # 'basic_model': [basic_features]}
 
-        num_of_iter_list = [50, 80, 100]
+    advanced_features = range(1, 31)
+    advanced_features = [str(i) for i in advanced_features]
+    basic_features = range(1, 14)
+    basic_features = [str(i) for i in basic_features]
+    basic_features.remove('7')
+    basic_features.remove('9')
+    basic_features.remove('11')
+    basic_features.remove('12')
+    feature_type_dict = {
+        'all_features': [advanced_features]}
+    # 'basic_model': [basic_features]}
+
+    cv = True
+    comp = False
+    use_edges_existed_on_train, use_pos_edges_existed_on_train = True, True
+    if cv:
+        cross_validation(feature_type_dict, train_file, test_file, comp_file, number_of_iter=20)
+    else:
+        num_of_iter_list = [20]  # [50, 80, 100]
         for num_of_iter in num_of_iter_list:
             start_time = time.time()
             if not comp:

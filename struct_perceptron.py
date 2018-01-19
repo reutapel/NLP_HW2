@@ -87,7 +87,7 @@ class StructPerceptron:
         for i in range(num_of_iter):
             print('{}: Starting Iteration #{}'.format(time.asctime(time.localtime(time.time())), i + 1))
             logging.info('{}: Starting Iteration #{}'.format(time.asctime(time.localtime(time.time())), i + 1))
-            for t in range(len(self.gold_tree)):
+            for t in list(self.gold_tree):
                 self.calculate_new_scores(t)
                 if t % 100 == 0:
                     print('{}: Working on sentence #{}'.format(time.asctime(time.localtime(time.time())), t + 1))

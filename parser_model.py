@@ -7,7 +7,6 @@ import numpy as np
 from collections import defaultdict
 from copy import copy
 from struct_perceptron import GraphUtil
-import math
 
 
 class ParserModel:
@@ -16,7 +15,9 @@ class ParserModel:
     based on a given train data
     """
 
-    def __init__(self, directory, train_file_name, test_file_name, comp_file_name, features_combination):
+    def __init__(self, directory, train_file_name, test_file_name, comp_file_name, features_combination,
+                 use_edges_existed_on_train=True, use_pos_edges_existed_on_train=True, train_index=None,
+                 test_index=None):
         """
         :param train_file_name: the name of the train file
         :param test_file_name: the name of the test file
@@ -51,11 +52,13 @@ class ParserModel:
 
         # Dictionary of edges found in train data - the indexes of the nodes
         # The format will be: {source: list of targets}
-        self.edges_existed_on_train = defaultdict(list)
+        self.edges_existed_on_train = None
+        self.use_edges_existed_on_train = use_edges_existed_on_train
 
         # Dictionary of edges found in train data - the POS of the nodes
         # The format will be: {source POS: list of targets POS}
-        self.pos_edges_existed_on_train = defaultdict(list)
+        self.pos_edges_existed_on_train = None
+        self.use_pos_edges_existed_on_train = use_pos_edges_existed_on_train
 
         """create train data and gold trees dict"""
         self.train_data = pd.read_table(train_file_name, header=None, names=self.file_columns_names)
@@ -64,15 +67,24 @@ class ParserModel:
         self.train_data = self.train_data.assign(head_word='')
         self.train_data = self.train_data.assign(head_POS='')
         self.create_gold_tree_dictionary('train')
+        if train_index is not None:  # if we use CV
+            # choose the relevant sentences
+            self.test_data = self.train_data.loc[self.train_data['sentence_index'].isin(test_index)]
+            self.train_data = self.train_data.loc[self.train_data['sentence_index'].isin(train_index)]
+            # modify the token_POS_dict and gold_tree to the new train data
+            self.gold_tree['train'] = {key: self.gold_tree['train'][key] for key in train_index}
+            # self.token_POS_dict['train'] = {key: self.token_POS_dict['train'][key] for key in train_index}
+
         self.create_edges_existed_on_train()
 
         """create test data and gold trees dict"""
-        self.test_data = pd.read_table(test_file_name, header=None, names=self.file_columns_names)
-        # add relevant columns:
-        self.test_data = self.test_data.assign(sentence_index=0)
-        self.test_data = self.test_data.assign(head_word='')
-        self.test_data = self.test_data.assign(head_POS='')
-        # self.create_gold_tree_dictionary('test')
+        if train_index is None:  # if no CV
+            self.test_data = pd.read_table(test_file_name, header=None, names=self.file_columns_names)
+            # add relevant columns:
+            self.test_data = self.test_data.assign(sentence_index=0)
+            self.test_data = self.test_data.assign(head_word='')
+            self.test_data = self.test_data.assign(head_POS='')
+            # self.create_gold_tree_dictionary('test')
 
         """create comp data and gold trees dict"""
         self.comp_data = pd.read_table(comp_file_name, header=None, names=self.file_columns_names)
@@ -109,8 +121,10 @@ class ParserModel:
         self.feature_24 = dict()
         self.feature_25 = dict()
         self.feature_26 = dict()
-        # todo: add child- parent - grandparent
-        # todo: add brothers
+        self.feature_27 = dict()
+        self.feature_28 = dict()
+        self.feature_29 = dict()
+        self.feature_30 = dict()
         # todo: think if we want to add road from p to b
 
         # a dictionary with the dictionary and the description of each feature
@@ -187,7 +201,11 @@ class ParserModel:
             '23': [self.feature_23, 'p-word, p-pos, c-pos, is_parent_before'],
             '24': [self.feature_24, 'p-word, p-pos, c-word, is_parent_before'],
             '25': [self.feature_25, 'p-word, c-word, distance(p,c), is_parent_before'],
-            '26': [self.feature_26, 'p-pos, c-pos, distance(p,c), is_parent_before']
+            '26': [self.feature_26, 'p-pos, c-pos, distance(p,c), is_parent_before'],
+            '27': [self.feature_27, 'p-pos, c-pos, g-pos, is_parent_before, grand_parent_before'],
+            '28': [self.feature_28, 'p-word, c-word, g-word, is_parent_before, grand_parent_before'],
+            '29': [self.feature_29, 'p-word, c-word, bro-word, is_parent_before, brother_before'],
+            '30': [self.feature_30, 'p-pos, c-pos, bro-pos, is_parent_before, brother_before']
         }
 
         return features_dicts
@@ -245,12 +263,14 @@ class ParserModel:
         sentence_index += 1
 
         # after we have the sentence index- we will create the data_token_pos_dict
-        self.token_POS_dict[mode] = data[['token', 'token_POS', 'sentence_index', 'token_counter']]\
+        self.token_POS_dict[mode] = data[['token', 'token_POS', 'sentence_index', 'token_counter', 'token_head']]\
             .set_index(['sentence_index', 'token_counter']).to_dict()
+
         # add the root
         for root_index in range(sentence_index):
             self.token_POS_dict[mode]['token'][(root_index, 0)] = 'root'
             self.token_POS_dict[mode]['token_POS'][(root_index, 0)] = 'root'
+            self.token_POS_dict[mode]['token_head'][(root_index, 0)] = -1
 
         if mode == 'comp':  # if this is comp - the next lines are not relevant
             print('{}: Finish building gold tree from {}'.format(time.asctime(time.localtime(time.time())), mode))
@@ -279,23 +299,29 @@ class ParserModel:
         """
 
         start_time = time.time()
-        print('{}: Start creating edges_existed_on_train and pos_edges_existed_on_train'.
-              format(time.asctime(time.localtime(time.time()))))
-        logging.info('{}: Start creating edges_existed_on_train and pos_edges_existed_on_train'.
-                     format(time.asctime(time.localtime(time.time()))))
-        source_target_df = copy(self.train_data[['token_head', 'token_counter']])
-        source_target_list_group_by = source_target_df.groupby('token_head', as_index=False)
-        for source in source_target_list_group_by.groups.keys():
-            target_df = source_target_list_group_by.get_group(source)['token_counter']
-            target_list = list(set(target_df))
-            self.edges_existed_on_train[source] = target_list
+        print('{}: Start creating edges_existed_on_train={} and pos_edges_existed_on_train={}'.
+              format(time.asctime(time.localtime(time.time())), self.use_edges_existed_on_train,
+                            self.use_pos_edges_existed_on_train))
+        logging.info('{}: Start creating edges_existed_on_train={} and pos_edges_existed_on_train={}'.
+                     format(time.asctime(time.localtime(time.time())), self.use_edges_existed_on_train,
+                            self.use_pos_edges_existed_on_train))
+        if self.use_edges_existed_on_train:
+            self.edges_existed_on_train = defaultdict(list)
+            source_target_df = copy(self.train_data[['token_head', 'token_counter']])
+            source_target_list_group_by = source_target_df.groupby('token_head', as_index=False)
+            for source in source_target_list_group_by.groups.keys():
+                target_df = source_target_list_group_by.get_group(source)['token_counter']
+                target_list = list(set(target_df))
+                self.edges_existed_on_train[source] = target_list
 
-        source_target_pos_df = copy(self.train_data[['head_POS', 'token_POS']])
-        source_target_list_pos_df = source_target_pos_df.groupby('head_POS', as_index=False)
-        for source in source_target_list_pos_df.groups.keys():
-            target_df = source_target_list_pos_df.get_group(source)['token_POS']
-            target_list = list(set(target_df))
-            self.pos_edges_existed_on_train[source] = target_list
+        if self.use_pos_edges_existed_on_train:
+            self.pos_edges_existed_on_train = defaultdict(list)
+            source_target_pos_df = copy(self.train_data[['head_POS', 'token_POS']])
+            source_target_list_pos_df = source_target_pos_df.groupby('head_POS', as_index=False)
+            for source in source_target_list_pos_df.groups.keys():
+                target_df = source_target_list_pos_df.get_group(source)['token_POS']
+                target_list = list(set(target_df))
+                self.pos_edges_existed_on_train[source] = target_list
 
         print('{}: Finish creating edges_existed_on_train and pos_edges_existed_on_train in {} seconds'
               .format(time.asctime(time.localtime(time.time())), time.time() - start_time))
@@ -358,6 +384,37 @@ class ParserModel:
 
             p_c_distance = abs(parent_index - child_index)
 
+            # get the grandparent index, pos and word
+            if parent_index == 0:
+                g_pos = 'before_root'
+                g_word = 'before_root'
+                grand_parent_before = True
+            else:
+                g_index = copy(self.token_POS_dict['train']['token_head'][(sentence_index, parent_index)])
+                g_pos = copy(self.token_POS_dict['train']['token_POS'][(sentence_index, g_index)])
+                g_word = copy(self.token_POS_dict['train']['token'][(sentence_index, g_index)])
+                if g_index > parent_index:
+                    grand_parent_before = False
+                else:
+                    grand_parent_before = True
+
+            # get the brothers index, pos and word
+            pos_brothers = list()
+            word_brothers = list()
+            brothers_list = copy(self.gold_tree['train'][sentence_index][parent_index])
+            brothers_list.remove(child_index)
+            if brothers_list:
+                for brother_index in brothers_list:
+                    if brother_index > child_index:
+                        brother_before_child = False
+                    else:
+                        brother_before_child = True
+                    pos_brothers.append([copy(self.token_POS_dict['train']['token_POS'][(sentence_index,
+                                                                                         brother_index)]),
+                                         brother_before_child])
+                    word_brothers.append([copy(self.token_POS_dict['train']['token'][(sentence_index, brother_index)]),
+                                          brother_before_child])
+
             # build feature_1 of p-word, p-pos
             self.update_feature_dict('1', p_word=p_word, p_pos=p_pos)
             # build feature_2 of p-word
@@ -419,6 +476,21 @@ class ParserModel:
             # build feature_26 of p-pos, c-pos, distance(p,c), is_parent_before
             self.update_feature_dict('26', p_pos=p_pos, c_pos=c_pos, is_parent_before=parent_before,
                                      distance_p_c=p_c_distance)
+            # build feature_27 of p-pos, c-pos, g-pos, grand_parent_before, parent_before
+            self.update_feature_dict('27', p_pos=p_pos, c_pos=c_pos, g_pos=g_pos,
+                                     grand_parent_before=grand_parent_before, is_parent_before=parent_before)
+            # build feature_28 of p-word, c-word, g-word, grand_parent_before, parent_before
+            self.update_feature_dict('28', p_word=p_word, c_word=c_word, g_word=g_word,
+                                     grand_parent_before=grand_parent_before, is_parent_before=parent_before)
+            if pos_brothers:
+                # build feature_29 of p-word, c-word, bro-word, brother_child_before, parent_before
+                for bro_pos, brother_child_before in pos_brothers:
+                    self.update_feature_dict('29', p_word=p_word, c_word=c_word, bro_pos=bro_pos,
+                                             brother_child_before=brother_child_before, is_parent_before=parent_before)
+                for bro_word, brother_child_before in word_brothers:
+                    # build feature_30 of p-pos, c-pos, bro-pos, brother_child_before, parent_before
+                    self.update_feature_dict('30', p_word=p_word, c_word=c_word, bro_word=bro_word,
+                                             brother_child_before=brother_child_before, is_parent_before=parent_before)
 
         # save all features dicts to csv
         for feature in self.features_dicts.keys():
@@ -428,7 +500,8 @@ class ParserModel:
 
     def update_feature_dict(self, feature_number, p_word=None, p_pos=None, c_word=None, c_pos=None, p_pos_minus_1=None,
                             p_pos_plus_1=None, c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None, distance_p_c=None,
-                            is_parent_before=None):
+                            is_parent_before=None, g_pos=None, g_word=None, grand_parent_before=None,
+                            bro_pos=None, bro_word=None, brother_child_before=None):
         """
         This method update the relevant feature dictionary
         :param feature_number: the number of the feature
@@ -443,12 +516,19 @@ class ParserModel:
         :param b_pos: POS of a word in between parent and child nodes.
         :param distance_p_c: distance between parent and child
         :param is_parent_before: if the parent has lower index than the child
+        :param g_pos: the POS of the grandparent
+        :param g_word: the word of the grandparent
+        :param grand_parent_before: if the grand_parent before the parent in the sentence
+        :param bro_pos: the POS of the brother
+        :param bro_word: the word of the brother
+        :param brother_child_before: if the brother before the child in the sentence
         :return: no return, just update the object's features' dictionaries
         """
 
         # Create the list of relevant feature components
         option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
-                                    c_pos_minus_1, b_pos, str(distance_p_c), str(is_parent_before)]
+                                    c_pos_minus_1, b_pos, str(distance_p_c), str(is_parent_before), g_pos, g_word,
+                                    str(grand_parent_before), bro_pos, bro_word, str(brother_child_before)]
         option_for_features_list = [x for x in option_for_features_list if x is not None]
         if feature_number in self.features_combination:
             # get relevant feature
@@ -541,7 +621,9 @@ class ParserModel:
     def calculate_local_feature_vec_per_feature(self, indexes_vector, feature_number, p_word=None, p_pos=None,
                                                 c_word=None, c_pos=None, p_pos_minus_1=None, p_pos_plus_1=None,
                                                 c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None, is_full_graph=False,
-                                                distance_p_c=None, is_parent_before=None):
+                                                distance_p_c=None, is_parent_before=None, g_pos=None, g_word=None,
+                                                grand_parent_before=None, bro_pos=None, bro_word=None,
+                                                brother_child_before=None):
         """
         This method create a feature vector per feature number for a given edge and a given feature number
         :param indexes_vector: if is_full_graph is True - this is a list and we will insert the indexes of the features
@@ -559,10 +641,17 @@ class ParserModel:
         :param is_full_graph: will be True if we build the full graph features vector
         :param distance_p_c: the distance between the parend and the child
         :param is_parent_before: if the parent has lower index than the child
+        :param g_pos: the POS of the grandparent
+        :param g_word: the word of the grandparent
+        :param grand_parent_before: if grand_parent before the parent
+        :param bro_pos: the POS of the brother
+        :param bro_word: the word of the brother
+        :param brother_child_before: if the brother before the child in the sentence
         :return: no return, the indexes_vector is updated
         """
         option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
-                                    c_pos_minus_1, b_pos, str(distance_p_c), str(is_parent_before)]
+                                    c_pos_minus_1, b_pos, str(distance_p_c), str(is_parent_before), g_pos, g_word,
+                                    str(grand_parent_before), bro_pos, bro_word, str(brother_child_before)]
         option_for_features_list = [x for x in option_for_features_list if x is not None]
         if feature_number in self.features_combination:
             # build feature
@@ -581,7 +670,7 @@ class ParserModel:
 
         return
 
-    def get_local_feature_vec(self, sentence_index, source, target, mode, is_full_graph=False):
+    def get_local_feature_vec(self, sentence_index, source, target, mode, is_full_graph=False, tree=None):
         """
         This method create a feature vector for a given edge
         :param sentence_index: the index of the sentence
@@ -589,6 +678,7 @@ class ParserModel:
         :param target: the token_counter of the child
         :param mode: the data type: train or test or comp
         :param is_full_graph: will be True if we build the full graph features vector
+        :param tree: if this is not a full-graph case: it should get the tree to get the grandparent and the siblings
         :return: the vector feature of the given edge
         """
 
@@ -630,6 +720,9 @@ class ParserModel:
         else:
             c_pos_plus_1 = 'end'
 
+        if child_index == 8 and parent_index == 0:
+            reut = 1
+
         # create a list of all POS between the parent and the child
         pos_between = list()
         if parent_index > child_index:
@@ -642,6 +735,65 @@ class ParserModel:
             pos_between.append(copy(self.token_POS_dict[mode]['token_POS'][(sentence_index, index_between)]))
 
         p_c_distance = abs(parent_index - child_index)
+
+        # get the grandparent and brothers index, pos and word
+        pos_brothers = list()
+        word_brothers = list()
+        brothers_list = list()
+        g_index_list = list()
+        g_pos_list = list()
+        g_word_list = list()
+        if parent_index == 0:
+            g_pos_list.append(['before_root', True])
+            g_word_list.append(['before_root', True])
+
+        else:
+            if is_full_graph:  # if we are creating features for the full graph - take the grandparent from it
+                                # there might be more than one parent
+                for source_index, target_list in self.full_graph[mode][sentence_index].items():
+                    if parent_index in target_list:
+                        g_index_list.append(source_index)
+                if not g_index_list:  # if the list is empty:
+                    print('no parent for index: {} in {} for full graph = {}'.format(parent_index, mode, is_full_graph))
+
+            elif tree is not None:  # if we are creating features for the specific tree - take the grandparent from it
+                for source_index, target_list in tree.items():
+                    if parent_index in target_list:
+                        g_index_list.append(source_index)
+                if not g_index_list:  # if the list is empty:
+                    print('no parent for index: {} in {} for full graph = {}'.format(parent_index, mode, is_full_graph))
+
+            else:
+                print('no full graph and no tree was given for sentence {} in mode {}'.format(sentence_index, mode))
+
+            for g_index in g_index_list:
+                if g_index > parent_index:
+                    temp_grand_parent_before = False
+                else:
+                    temp_grand_parent_before = True
+                g_pos_list.append([copy(self.token_POS_dict[mode]['token_POS'][(sentence_index, g_index)]),
+                                   temp_grand_parent_before])
+                g_word_list.append([copy(self.token_POS_dict[mode]['token'][(sentence_index, g_index)]),
+                                    temp_grand_parent_before])
+
+        # get the brothers index, pos and word
+        if is_full_graph:
+            brothers_list = copy(self.full_graph[mode][sentence_index][parent_index])
+        elif tree is not None:
+            brothers_list = copy(self.gold_tree[mode][sentence_index][parent_index])
+
+        if child_index in brothers_list:
+            brothers_list.remove(child_index)
+        if brothers_list:
+            for brother_index in brothers_list:
+                if brother_index > child_index:
+                    brother_before_child = False
+                else:
+                    brother_before_child = True
+                pos_brothers.append([copy(self.token_POS_dict[mode]['token_POS'][(sentence_index, brother_index)]),
+                                    brother_before_child])
+                word_brothers.append([copy(self.token_POS_dict[mode]['token'][(sentence_index, brother_index)]),
+                                      brother_before_child])
 
         # calculate feature_1 of p-word, p-pos
         self.calculate_local_feature_vec_per_feature(indexes_vector, '1', p_word=p_word, p_pos=p_pos,
@@ -726,6 +878,30 @@ class ParserModel:
         self.calculate_local_feature_vec_per_feature(indexes_vector, '26', p_pos=p_pos, c_pos=c_pos,
                                                      is_parent_before=parent_before, distance_p_c=p_c_distance,
                                                      is_full_graph=is_full_graph)
+        # build feature_27 of p-pos, c-pos, g-pos
+        for g_pos, grand_parent_before in g_pos_list:
+            self.calculate_local_feature_vec_per_feature(indexes_vector, '27', p_pos=p_pos, c_pos=c_pos, g_pos=g_pos,
+                                                         is_full_graph=is_full_graph, is_parent_before=parent_before,
+                                                         grand_parent_before=grand_parent_before)
+        # build feature_28 of p-word, c-word, g-word
+        for g_word, grand_parent_before in g_word_list:
+            self.calculate_local_feature_vec_per_feature(indexes_vector, '28', p_word=p_word, c_word=c_word,
+                                                         g_word=g_word, is_full_graph=is_full_graph,
+                                                         is_parent_before=parent_before,
+                                                         grand_parent_before=grand_parent_before)
+
+        if pos_brothers:
+            # build feature_29 of p-word, c-word, bro-word, brother_child_before, parent_before
+            for bro_pos, brother_child_before in pos_brothers:
+                self.calculate_local_feature_vec_per_feature(indexes_vector, '29', p_word=p_word, c_word=c_word,
+                                                             bro_pos=bro_pos, brother_child_before=brother_child_before,
+                                                             is_parent_before=parent_before, is_full_graph=is_full_graph)
+            for bro_word, brother_child_before in word_brothers:
+                # build feature_30 of p-pos, c-pos, bro-pos, brother_child_before, parent_before
+                self.calculate_local_feature_vec_per_feature(indexes_vector, '30', p_word=p_word, c_word=c_word,
+                                                             bro_word=bro_word, is_full_graph=is_full_graph,
+                                                             brother_child_before=brother_child_before,
+                                                             is_parent_before=parent_before)
 
         return indexes_vector
 
@@ -744,7 +920,7 @@ class ParserModel:
             source = edge[0]
             target_nodes_list = edge[1]
             for target in target_nodes_list:
-                edge_indexes_vector = self.get_local_feature_vec(sentence_index, source, target, mode)
+                edge_indexes_vector = self.get_local_feature_vec(sentence_index, source, target, mode, tree=tree)
                 tree_indexes_vector = np.add(edge_indexes_vector, tree_indexes_vector)
 
         # csr_tree_indexes_vector = csr_matrix(tree_indexes_vector)
