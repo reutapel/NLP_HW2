@@ -195,9 +195,9 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
-    train_file = os.path.join(base_directory, 'HW2-files', 'train_small.labeled')
-    test_file = os.path.join(base_directory, 'HW2-files', 'test_small.labeled')
-    comp_file = os.path.join(base_directory, 'HW2-files', 'comp_small.unlabeled')
+    train_file = os.path.join(base_directory, 'HW2-files', 'train.labeled')
+    test_file = os.path.join(base_directory, 'HW2-files', 'test.labeled')
+    comp_file = os.path.join(base_directory, 'HW2-files', 'comp.unlabeled')
     # change name to chosen weights for running comp inference
     best_weights_vec_loaded_basic = os.path.join(base_directory, 'output',
                                                       'advanced_model_5080100_iter_20_01_2018_00_23_28',
