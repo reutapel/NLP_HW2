@@ -17,7 +17,7 @@ import math
 # open log connection
 sub_dirs = ["logs", "evaluations", "dict", "weights"]
 base_directory = os.path.abspath(os.curdir)
-run_dir = datetime.now().strftime("advanced_stepwise_%d_%m_%Y_%H_%M_%S")
+run_dir = datetime.now().strftime("debug_%d_%m_%Y_%H_%M_%S")
 directory = os.path.join(base_directory, "output", run_dir)
 for sub_dir in sub_dirs:
     os.makedirs(os.path.join(directory, sub_dir))
@@ -160,7 +160,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
                 with open(os.path.join(weights_directory, weights), 'rb') as fp:
                     weight_vec = pickle.load(fp)
                 weights = weights[:-4]
-                if train_index is not None and weights != 'final_weight_vec_20':
+                if train_index is not None and weights != 'final_weight_vec_'.format(number_of_iter):
                     continue
                 accuracy[weights], mistakes_dict_names[weights] = evaluate_obj.calculate_accuracy(weight_vec,
                                                                                                   weights, test_type)
@@ -186,7 +186,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
                 pickle.dump(best_weights_vec, f)
 
             if train_index is not None:  # running CV
-                return accuracy['final_weight_vec_20']
+                return accuracy['final_weight_vec_'.format(number_of_iter)]
 
             logging.info('{}: best weights for {}, {}, {}, with accuracy {}, name is: {} '
                          .format(time.asctime(time.localtime(time.time())), num_of_iter, test_type,
@@ -211,7 +211,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
-    train_file = os.path.join(base_directory, 'HW2-files', 'train.labeled')
+    train_file = os.path.join(base_directory, 'HW2-files', 'train_small.labeled')
     test_file = os.path.join(base_directory, 'HW2-files', 'test.labeled')
     comp_file = os.path.join(base_directory, 'HW2-files', 'comp.unlabeled')
     # change name to chosen weights for running comp inference
@@ -243,11 +243,11 @@ if __name__ == "__main__":
     if cv:
         # if running with all train data: number_of_sentence_train = 5000, else: put the number ot sentences
         # you have in the small train you run
-        cross_validation(feature_type_dict, train_file, test_file, comp_file, number_of_iter=20,
+        cross_validation(feature_type_dict, train_file, test_file, comp_file, number_of_iter=10,
                          number_of_sentence_train=5000)
     elif stepwise:
-        cross_validation(feature_type_dict, train_file, test_file, comp_file, number_of_iter=20,
-                         number_of_sentence_train=5000, is_cv=False)
+        cross_validation(feature_type_dict, train_file, test_file, comp_file, number_of_iter=10,
+                         number_of_sentence_train=5, is_cv=False)
     else:
         for num_of_iter in num_of_iter_list:
             start_time = time.time()
@@ -264,4 +264,3 @@ if __name__ == "__main__":
                   format(time.asctime(time.localtime(time.time())), num_of_iter, run_time))
             logging.info('{}: Finish running with num_of_iter:{} . Run time is: {} minutes'.
                          format(time.asctime(time.localtime(time.time())), num_of_iter, run_time))
-
