@@ -29,8 +29,8 @@ class StructPerceptron:
         * test mode ('test')
         * competition mode ('comp')
         """
-        os.makedirs(os.path.join(directory, 'weights', feature_combination))
-        self._directory = os.path.join(directory, 'weights', feature_combination)
+        self._directory = os.path.join(directory, 'weights', "_".join(feature_combination))
+        os.makedirs(self._directory)
         # constant which represent the 'root' node in the data
         self._ROOT = 0
         self.model = model
