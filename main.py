@@ -242,7 +242,7 @@ if __name__ == "__main__":
                                                     'best_weights_final_weight_vec_80.pkl')
     best_weights_list = [best_weights_vec_loaded_basic, best_weights_vec_loaded_advanced]
 
-    advanced_features = range(1, 31)
+    advanced_features = range(30, 0, -1)
     advanced_features = [str(i) for i in advanced_features]
     basic_features = range(1, 14)
     basic_features = [str(i) for i in basic_features]
