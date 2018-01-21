@@ -59,26 +59,44 @@ def cross_validation(features_dict, train_file_to_use, test_file_to_use, comp_fi
             k = 0
             candidate_acc_list = list()
 
-            for train_index, test_index in split_list_cv:
-                if not is_cv:  # do not run CV
-                    train_index, test_index = split_list[0], split_list[1]
-                logging.info('{}: Start running fold number {}'.format(time.asctime(time.localtime(time.time())), k))
-                print('{}: Start running fold number {}'.format(time.asctime(time.localtime(time.time())), k))
+            if is_cv:
+                for train_index, test_index in split_list_cv:
+                    logging.info('{}: Start running fold number {} with candidate {}'.
+                                 format(time.asctime(time.localtime(time.time())), k, candidate))
+                    print('{}: Start running fold number {} with candidate {}'.
+                          format(time.asctime(time.localtime(time.time())), k, candidate))
+                    accuracy = main(train_file_to_use, test_file_to_use, comp_file_to_use, 'test',
+                                    [features_to_run], number_of_iter, comp=False, train_index=train_index,
+                                    test_index=test_index, best_weights_list=None)
+                    candidate_acc_list.append(accuracy)
+
+                    run_time_cv = (time.time() - cv_start_time) / 60.0
+                    print("{}: Finish running iteration {}. Run time is: {} minutes".
+                          format(time.asctime(time.localtime(time.time())), k, run_time_cv))
+                    logging.info('{}: Finish running iteration {}. Run time is: {} minutes'.
+                                 format(time.asctime(time.localtime(time.time())), k, run_time_cv))
+                    k += 1
+                # the average accuracy of the CV for the features we test
+                acc_with_candidates.append((sum(candidate_acc_list)/float(len(candidate_acc_list)), candidate))
+
+            else:  # do not run CV
+                train_index, test_index = split_list[0], split_list[1]
+                logging.info('{}: Start running split data with candidate {}'.
+                             format(time.asctime(time.localtime(time.time())), candidate))
+                print('{}: Start running split data with candidate {}'.
+                      format(time.asctime(time.localtime(time.time())), candidate))
                 accuracy = main(train_file_to_use, test_file_to_use, comp_file_to_use, 'test',
                                 [features_to_run], number_of_iter, comp=False, train_index=train_index,
                                 test_index=test_index, best_weights_list=None)
-                candidate_acc_list.append(accuracy)
+
+                # the accuracy for the features we test
+                acc_with_candidates.append((accuracy, candidate))
 
                 run_time_cv = (time.time() - cv_start_time) / 60.0
-                print("{}: Finish running iteration {}. Run time is: {} minutes".
-                      format(time.asctime(time.localtime(time.time())), k, run_time_cv))
-                logging.info('{}: Finish running iteration {}. Run time is: {} minutes'.
-                             format(time.asctime(time.localtime(time.time())), k, run_time_cv))
-                k += 1
-                if not is_cv and k == 1:
-                    break
-            # the average accuracy of the CV for the features we test
-            acc_with_candidates.append((sum(candidate_acc_list)/float(len(candidate_acc_list)), candidate))
+                print("{}: Finish running for candidate {}. Run time is: {} minutes".
+                      format(time.asctime(time.localtime(time.time())), candidate, run_time_cv))
+                logging.info('{}: Finish running for candidate {}. Run time is: {} minutes'.
+                             format(time.asctime(time.localtime(time.time())), candidate, run_time_cv))
 
         # after testing all possible candidate we want to remove - find the one that the model without it got the
         # highest accuracy
@@ -160,7 +178,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
                 with open(os.path.join(weights_directory, weights), 'rb') as fp:
                     weight_vec = pickle.load(fp)
                 weights = weights[:-4]
-                if train_index is not None and weights != 'final_weight_vec_'.format(number_of_iter):
+                if train_index is not None and weights != 'final_weight_vec_{}'.format(number_of_iter):
                     continue
                 accuracy[weights], mistakes_dict_names[weights] = evaluate_obj.calculate_accuracy(weight_vec,
                                                                                                   weights, test_type)
@@ -186,7 +204,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
                 pickle.dump(best_weights_vec, f)
 
             if train_index is not None:  # running CV
-                return accuracy['final_weight_vec_'.format(number_of_iter)]
+                return accuracy['final_weight_vec_{}'.format(number_of_iter)]
 
             logging.info('{}: best weights for {}, {}, {}, with accuracy {}, name is: {} '
                          .format(time.asctime(time.localtime(time.time())), num_of_iter, test_type,
@@ -211,7 +229,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
-    train_file = os.path.join(base_directory, 'HW2-files', 'train_small.labeled')
+    train_file = os.path.join(base_directory, 'HW2-files', 'train.labeled')
     test_file = os.path.join(base_directory, 'HW2-files', 'test.labeled')
     comp_file = os.path.join(base_directory, 'HW2-files', 'comp.unlabeled')
     # change name to chosen weights for running comp inference
@@ -247,7 +265,7 @@ if __name__ == "__main__":
                          number_of_sentence_train=5000)
     elif stepwise:
         cross_validation(feature_type_dict, train_file, test_file, comp_file, number_of_iter=10,
-                         number_of_sentence_train=5, is_cv=False)
+                         number_of_sentence_train=5000, is_cv=False)
     else:
         for num_of_iter in num_of_iter_list:
             start_time = time.time()
