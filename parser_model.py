@@ -529,7 +529,7 @@ class ParserModel:
         option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
                                     c_pos_minus_1, b_pos, str(distance_p_c), str(is_parent_before), g_pos, g_word,
                                     str(grand_parent_before), bro_pos, bro_word, str(brother_child_before)]
-        option_for_features_list = [x for x in option_for_features_list if x is not None]
+        option_for_features_list = [x for x in option_for_features_list if x is not None and x != 'None']
         if feature_number in self.features_combination:
             # get relevant feature
             feature_dict = self.features_dicts[feature_number][0]
@@ -652,7 +652,7 @@ class ParserModel:
         option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
                                     c_pos_minus_1, b_pos, str(distance_p_c), str(is_parent_before), g_pos, g_word,
                                     str(grand_parent_before), bro_pos, bro_word, str(brother_child_before)]
-        option_for_features_list = [x for x in option_for_features_list if x is not None]
+        option_for_features_list = [x for x in option_for_features_list if x is not None and x != 'None']
         if feature_number in self.features_combination:
             # build feature
             feature_dict = self.features_dicts[feature_number][0]
