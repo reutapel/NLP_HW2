@@ -18,8 +18,9 @@ class StructPerceptron:
     using Chu-Liu-Edmonds algorithm to find the Maximum Spanning Tree
     """
 
-    def __init__(self, model, directory, mode='train'):
+    def __init__(self, model, directory, mode='train', feature_combination=None):
         """
+        :param str feature_combination: the feature combination in this run
         :param model: an object of the model, which will create for a given edge its feature vector
         :type model: parser_model.ParserModel
         :param str directory: the path to save files in, for the current run
@@ -28,7 +29,8 @@ class StructPerceptron:
         * test mode ('test')
         * competition mode ('comp')
         """
-        self.directory = os.path.join(directory, 'weights')
+        os.makedirs(os.path.join(directory, 'weights', feature_combination))
+        self._directory = os.path.join(directory, 'weights', feature_combination)
         # constant which represent the 'root' node in the data
         self._ROOT = 0
         self.model = model
@@ -49,6 +51,10 @@ class StructPerceptron:
         self._mode = mode
         self.gold_tree = None
         self.inference_mode(mode)
+
+    @property
+    def directory(self):
+        return self._directory
 
     def inference_mode(self, mode='train', weight_vec=None):
         """
@@ -87,7 +93,7 @@ class StructPerceptron:
         for i in range(num_of_iter):
             print('{}: Starting Iteration #{}'.format(time.asctime(time.localtime(time.time())), i + 1))
             logging.info('{}: Starting Iteration #{}'.format(time.asctime(time.localtime(time.time())), i + 1))
-            for t in list(self.gold_tree):
+            for t in self.gold_tree.keys():
                 self.calculate_new_scores(t)
                 if t % 100 == 0:
                     print('{}: Working on sentence #{}'.format(time.asctime(time.localtime(time.time())), t + 1))
@@ -101,13 +107,13 @@ class StructPerceptron:
                     self.current_weight_vec_iter += 1
                     self.current_weight_vec = new_weight_vec
             if i+1 in [20, 50, 80, 100]:
-                with open(os.path.join(self.directory, 'final_weight_vec_{}.pkl'.format(i + 1)), 'wb') as f:
+                with open(os.path.join(self._directory, 'final_weight_vec_{}.pkl'.format(i + 1)), 'wb') as f:
                     pickle.dump(self.current_weight_vec, f)
         print("{}: the number of weight updates in this training:{}".format(time.asctime(time.localtime(time.time()))
                                                                             , self.current_weight_vec_iter))
         logging.info("{}: the number of weight updates in this training:{}"
                      .format(time.asctime(time.localtime(time.time())), self.current_weight_vec_iter))
-        with open(os.path.join(self.directory, 'final_weight_vec_{}.pkl'.format(num_of_iter)), 'wb') as f:
+        with open(os.path.join(self._directory, 'final_weight_vec_{}.pkl'.format(num_of_iter)), 'wb') as f:
             pickle.dump(self.current_weight_vec, f)
         return self.current_weight_vec
 
