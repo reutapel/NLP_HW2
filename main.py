@@ -157,7 +157,8 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
               format(time.asctime(time.localtime(time.time())), features_combination, number_of_iter))
         logging.info('{}: Start Perceptron for features : {} and number of iterations: {}'.
                      format(time.asctime(time.localtime(time.time())), features_combination, number_of_iter))
-        perceptron_obj = StructPerceptron(model=parser_model_obj, directory=directory)
+        perceptron_obj = StructPerceptron(model=parser_model_obj, directory=directory,
+                                          feature_combination=features_combination)
         weights = perceptron_obj.perceptron(num_of_iter=number_of_iter)
 
         train_run_time = (time.time() - model_finish_time) / 60.0
@@ -170,7 +171,7 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
         evaluate_obj = Evaluate(parser_model_obj, perceptron_obj, directory)
         best_weights_name = str()
         if test_type != 'comp':
-            weights_directory = os.path.join(directory, 'weights')
+            weights_directory = perceptron_obj.directory
             weight_file_names = [f for f in listdir(weights_directory) if isfile(join(weights_directory, f))]
             accuracy = dict()
             mistakes_dict_names = dict()
@@ -229,8 +230,8 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
 if __name__ == "__main__":
     logging.info('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
     print('{}: Start running'.format(time.asctime(time.localtime(time.time()))))
-    train_file = os.path.join(base_directory, 'HW2-files', 'train.labeled')
-    test_file = os.path.join(base_directory, 'HW2-files', 'test.labeled')
+    train_file = os.path.join(base_directory, 'HW2-files', 'train_small.labeled')
+    test_file = os.path.join(base_directory, 'HW2-files', 'test_small.labeled')
     comp_file = os.path.join(base_directory, 'HW2-files', 'comp.unlabeled')
     # change name to chosen weights for running comp inference
     best_weights_vec_loaded_basic = os.path.join(base_directory, 'output',
