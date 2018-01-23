@@ -125,7 +125,7 @@ class ParserModel:
         self.feature_28 = dict()
         self.feature_29 = dict()
         self.feature_30 = dict()
-        # todo: think if we want to add road from p to b
+        self.feature_31 = dict()
 
         # a dictionary with the dictionary and the description of each feature
         self.features_dicts = self.define_features_dicts()
@@ -205,7 +205,8 @@ class ParserModel:
             '27': [self.feature_27, 'p-pos, c-pos, g-pos, is_parent_before, grand_parent_before'],
             '28': [self.feature_28, 'p-word, c-word, g-word, is_parent_before, grand_parent_before'],
             '29': [self.feature_29, 'p-word, c-word, bro-word, is_parent_before, brother_before'],
-            '30': [self.feature_30, 'p-pos, c-pos, bro-pos, is_parent_before, brother_before']
+            '30': [self.feature_30, 'p-pos, c-pos, bro-pos, is_parent_before, brother_before'],
+            '31': [self.feature_31, 'distance(p,c), is_parent_before']
         }
 
         return features_dicts
@@ -491,6 +492,8 @@ class ParserModel:
                     # build feature_30 of p-pos, c-pos, bro-pos, brother_child_before, parent_before
                     self.update_feature_dict('30', p_word=p_word, c_word=c_word, bro_word=bro_word,
                                              brother_child_before=brother_child_before, is_parent_before=parent_before)
+            # build feature_31 of distance(p,c), is_parent_before
+            self.update_feature_dict('31', is_parent_before=parent_before, distance_p_c=p_c_distance)
 
         # save all features dicts to csv
         for feature in self.features_dicts.keys():
@@ -899,6 +902,9 @@ class ParserModel:
                                                              bro_word=bro_word, is_full_graph=is_full_graph,
                                                              brother_child_before=brother_child_before,
                                                              is_parent_before=parent_before)
+        # build feature_31 of distance(p,c), is_parent_before
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '31', is_parent_before=parent_before,
+                                                     distance_p_c=p_c_distance, is_full_graph=is_full_graph)
 
         return indexes_vector
 
