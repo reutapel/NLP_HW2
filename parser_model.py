@@ -350,11 +350,11 @@ class ParserModel:
 
             # prefix ans suffix of the c-word and p-word
             p_3_pre, p_3_suf, c_3_pre, c_3_suf = None, None, None, None
-            if len(p_word) > 3:
-                p_3_pre = p_word[0:4]
+            if len(p_word) > 3 and p_word != 'root':
+                p_3_pre = p_word[0:3]
                 p_3_suf = p_word[-3:]
             if len(c_word) > 3:
-                c_3_pre = c_word[0:4]
+                c_3_pre = c_word[0:3]
                 c_3_suf = c_word[-3:]
 
             sentence_index = copy(row['sentence_index'])
@@ -719,11 +719,11 @@ class ParserModel:
 
         # prefix ans suffix of the c-word and p-word
         p_3_pre, p_3_suf, c_3_pre, c_3_suf = None, None, None, None
-        if len(p_word) > 3:
-            p_3_pre = p_word[0:4]
+        if len(p_word) > 3 and p_word != 'root':
+            p_3_pre = p_word[0:3]
             p_3_suf = p_word[-3:]
         if len(c_word) > 3:
-            c_3_pre = c_word[0:4]
+            c_3_pre = c_word[0:3]
             c_3_suf = c_word[-3:]
 
         # find p_pos_minus_1 and p_pos_plus_1
