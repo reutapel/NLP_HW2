@@ -56,6 +56,10 @@ class StructPerceptron:
     def directory(self):
         return self._directory
 
+    @directory.setter
+    def directory(self,directory):
+        self._directory = directory
+
     def inference_mode(self, mode='train', weight_vec=None):
         """
         based on whether we use this class for train or test,
