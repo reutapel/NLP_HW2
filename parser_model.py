@@ -125,7 +125,9 @@ class ParserModel:
         self.feature_28 = dict()
         self.feature_29 = dict()
         self.feature_30 = dict()
-        # todo: think if we want to add road from p to b
+        self.feature_31 = dict()
+        self.feature_32 = dict()
+        self.feature_33 = dict()
 
         # a dictionary with the dictionary and the description of each feature
         self.features_dicts = self.define_features_dicts()
@@ -205,7 +207,10 @@ class ParserModel:
             '27': [self.feature_27, 'p-pos, c-pos, g-pos, is_parent_before, grand_parent_before'],
             '28': [self.feature_28, 'p-word, c-word, g-word, is_parent_before, grand_parent_before'],
             '29': [self.feature_29, 'p-word, c-word, bro-word, is_parent_before, brother_before'],
-            '30': [self.feature_30, 'p-pos, c-pos, bro-pos, is_parent_before, brother_before']
+            '30': [self.feature_30, 'p-pos, c-pos, bro-pos, is_parent_before, brother_before'],
+            '31': [self.feature_31, 'distance(p,c), is_parent_before'],
+            '32': [self.feature_32, 'p-3-pre, c-3-pre'],
+            '33': [self.feature_33, 'p-3-suf, c-3-suf']
         }
 
         return features_dicts
@@ -342,6 +347,16 @@ class ParserModel:
             p_pos = copy(row['head_POS'])
             c_word = copy(row['token'])
             c_pos = copy(row['token_POS'])
+
+            # prefix ans suffix of the c-word and p-word
+            p_3_pre, p_3_suf, c_3_pre, c_3_suf = None, None, None, None
+            if len(p_word) > 3:
+                p_3_pre = p_word[0:4]
+                p_3_suf = p_word[-3:]
+            if len(c_word) > 3:
+                c_3_pre = c_word[0:4]
+                c_3_suf = c_word[-3:]
+
             sentence_index = copy(row['sentence_index'])
             # find p_pos_minus_1 and p_pos_plus_1
             parent_index = copy(row['token_head'])
@@ -491,6 +506,12 @@ class ParserModel:
                     # build feature_30 of p-pos, c-pos, bro-pos, brother_child_before, parent_before
                     self.update_feature_dict('30', p_word=p_word, c_word=c_word, bro_word=bro_word,
                                              brother_child_before=brother_child_before, is_parent_before=parent_before)
+            # build feature_31 of distance(p,c), is_parent_before
+            self.update_feature_dict('31', is_parent_before=parent_before, distance_p_c=p_c_distance)
+            # build feature_32 of p-3-pre, c-3-pre
+            self.update_feature_dict('32', p_3_pre=p_3_pre, c_3_pre=c_3_pre)
+            # build feature_33 of p-3-suf, c-3-suf
+            self.update_feature_dict('33', p_3_suf=p_3_suf, c_3_suf=c_3_suf)
 
         # save all features dicts to csv
         for feature in self.features_dicts.keys():
@@ -501,7 +522,8 @@ class ParserModel:
     def update_feature_dict(self, feature_number, p_word=None, p_pos=None, c_word=None, c_pos=None, p_pos_minus_1=None,
                             p_pos_plus_1=None, c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None, distance_p_c=None,
                             is_parent_before=None, g_pos=None, g_word=None, grand_parent_before=None,
-                            bro_pos=None, bro_word=None, brother_child_before=None):
+                            bro_pos=None, bro_word=None, brother_child_before=None, p_3_pre=None, p_3_suf=None,
+                            c_3_pre=None, c_3_suf=None):
         """
         This method update the relevant feature dictionary
         :param feature_number: the number of the feature
@@ -528,7 +550,8 @@ class ParserModel:
         # Create the list of relevant feature components
         option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
                                     c_pos_minus_1, b_pos, str(distance_p_c), str(is_parent_before), g_pos, g_word,
-                                    str(grand_parent_before), bro_pos, bro_word, str(brother_child_before)]
+                                    str(grand_parent_before), bro_pos, bro_word, str(brother_child_before),
+                                    p_3_pre, p_3_suf, c_3_pre, c_3_suf]
         option_for_features_list = [x for x in option_for_features_list if x is not None and x != 'None']
         if feature_number in self.features_combination:
             # get relevant feature
@@ -623,7 +646,8 @@ class ParserModel:
                                                 c_pos_plus_1=None, c_pos_minus_1=None, b_pos=None, is_full_graph=False,
                                                 distance_p_c=None, is_parent_before=None, g_pos=None, g_word=None,
                                                 grand_parent_before=None, bro_pos=None, bro_word=None,
-                                                brother_child_before=None):
+                                                brother_child_before=None, p_3_pre=None, p_3_suf=None, c_3_pre=None,
+                                                c_3_suf=None):
         """
         This method create a feature vector per feature number for a given edge and a given feature number
         :param indexes_vector: if is_full_graph is True - this is a list and we will insert the indexes of the features
@@ -651,7 +675,8 @@ class ParserModel:
         """
         option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
                                     c_pos_minus_1, b_pos, str(distance_p_c), str(is_parent_before), g_pos, g_word,
-                                    str(grand_parent_before), bro_pos, bro_word, str(brother_child_before)]
+                                    str(grand_parent_before), bro_pos, bro_word, str(brother_child_before),
+                                    p_3_pre, p_3_suf, c_3_pre, c_3_suf]
         option_for_features_list = [x for x in option_for_features_list if x is not None and x != 'None']
         if feature_number in self.features_combination:
             # build feature
@@ -691,6 +716,15 @@ class ParserModel:
         p_pos = copy(self.token_POS_dict[mode]['token_POS'][(sentence_index, source)])
         c_word = copy(self.token_POS_dict[mode]['token'][(sentence_index, target)])
         c_pos = copy(self.token_POS_dict[mode]['token_POS'][(sentence_index, target)])
+
+        # prefix ans suffix of the c-word and p-word
+        p_3_pre, p_3_suf, c_3_pre, c_3_suf = None, None, None, None
+        if len(p_word) > 3:
+            p_3_pre = p_word[0:4]
+            p_3_suf = p_word[-3:]
+        if len(c_word) > 3:
+            c_3_pre = c_word[0:4]
+            c_3_suf = c_word[-3:]
 
         # find p_pos_minus_1 and p_pos_plus_1
         parent_index = source
@@ -899,6 +933,15 @@ class ParserModel:
                                                              bro_word=bro_word, is_full_graph=is_full_graph,
                                                              brother_child_before=brother_child_before,
                                                              is_parent_before=parent_before)
+        # build feature_31 of distance(p,c), is_parent_before
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '31', is_parent_before=parent_before,
+                                                     distance_p_c=p_c_distance, is_full_graph=is_full_graph)
+        # build feature_32 of p-3-pre, c-3-pre
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '32', p_3_pre=p_3_pre, c_3_pre=c_3_pre,
+                                                     is_full_graph=is_full_graph)
+        # build feature_33 of p-3-suf, c-3-suf
+        self.calculate_local_feature_vec_per_feature(indexes_vector, '33', p_3_suf=p_3_suf, c_3_suf=c_3_suf,
+                                                     is_full_graph=is_full_graph)
 
         return indexes_vector
 
