@@ -8,6 +8,7 @@ from struct_perceptron import GraphUtil
 import pandas as pd
 import numpy as np
 
+
 class Evaluate:
 
     """

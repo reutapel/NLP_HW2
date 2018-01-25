@@ -17,7 +17,7 @@ import math
 # open log connection
 sub_dirs = ["logs", "evaluations", "dict", "weights"]
 base_directory = os.path.abspath(os.curdir)
-run_dir = datetime.now().strftime("stepwise_no_27_%d_%m_%Y_%H_%M_%S")
+run_dir = datetime.now().strftime("stepwise_new_new_%d_%m_%Y_%H_%M_%S")
 directory = os.path.join(base_directory, "output", run_dir)
 for sub_dir in sub_dirs:
     os.makedirs(os.path.join(directory, sub_dir))
@@ -242,9 +242,17 @@ if __name__ == "__main__":
                                                     'best_weights_final_weight_vec_80.pkl')
     best_weights_list = [best_weights_vec_loaded_basic, best_weights_vec_loaded_advanced]
 
-    advanced_features = range(30, 0, -1)
+    advanced_features = range(32, 0, -1)
     advanced_features = [str(i) for i in advanced_features]
     advanced_features.remove('27')
+    advanced_features.remove('29')
+    advanced_features.remove('7')
+    advanced_features.remove('6')
+    advanced_features.remove('5')
+    advanced_features.remove('4')
+    advanced_features2 = copy(advanced_features)
+    advanced_features2.remove('32')
+    advanced_features2.remove('33')
     basic_features = range(1, 14)
     basic_features = [str(i) for i in basic_features]
     basic_features.remove('7')
@@ -252,10 +260,10 @@ if __name__ == "__main__":
     basic_features.remove('11')
     basic_features.remove('12')
     feature_type_dict = {
-        'all_features': [advanced_features]}
-        # 'basic_model': [basic_features]}
+        'all_features': [advanced_features],
+        'basic_model': [basic_features]}
 
-    num_of_iter_list = [20]
+    num_of_iter_list = [10]
     cv = False
     stepwise = True
     comp = False

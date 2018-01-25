@@ -209,8 +209,8 @@ class ParserModel:
             '29': [self.feature_29, 'p-word, c-word, bro-word, is_parent_before, brother_before'],
             '30': [self.feature_30, 'p-pos, c-pos, bro-pos, is_parent_before, brother_before'],
             '31': [self.feature_31, 'distance(p,c), is_parent_before'],
-            '32': [self.feature_32, 'p-3-pre, c-3-pre'],
-            '33': [self.feature_33, 'p-3-suf, c-3-suf']
+            '32': [self.feature_32, 'p-3-pre, c-3-pre, distance(p,c), is_parent_before'],
+            '33': [self.feature_33, 'p-3-suf, c-3-suf, distance(p,c), is_parent_before']
         }
 
         return features_dicts
@@ -509,9 +509,11 @@ class ParserModel:
             # build feature_31 of distance(p,c), is_parent_before
             self.update_feature_dict('31', is_parent_before=parent_before, distance_p_c=p_c_distance)
             # build feature_32 of p-3-pre, c-3-pre
-            self.update_feature_dict('32', p_3_pre=p_3_pre, c_3_pre=c_3_pre)
+            self.update_feature_dict('32', p_3_pre=p_3_pre, c_3_pre=c_3_pre, is_parent_before=parent_before,
+                                     distance_p_c=p_c_distance)
             # build feature_33 of p-3-suf, c-3-suf
-            self.update_feature_dict('33', p_3_suf=p_3_suf, c_3_suf=c_3_suf)
+            self.update_feature_dict('33', p_3_suf=p_3_suf, c_3_suf=c_3_suf, is_parent_before=parent_before,
+                                     distance_p_c=p_c_distance)
 
         # save all features dicts to csv
         for feature in self.features_dicts.keys():
@@ -544,6 +546,10 @@ class ParserModel:
         :param bro_pos: the POS of the brother
         :param bro_word: the word of the brother
         :param brother_child_before: if the brother before the child in the sentence
+        :param c_3_suf: the 3 last letters in c-word
+        :param c_3_pre: the 3 first letters in c-word
+        :param p_3_suf: the 3 last letters in p-word
+        :param p_3_pre: the 3 first letters in p-word
         :return: no return, just update the object's features' dictionaries
         """
 
@@ -671,6 +677,10 @@ class ParserModel:
         :param bro_pos: the POS of the brother
         :param bro_word: the word of the brother
         :param brother_child_before: if the brother before the child in the sentence
+        :param c_3_suf: the 3 last letters in c-word
+        :param c_3_pre: the 3 first letters in c-word
+        :param p_3_suf: the 3 last letters in p-word
+        :param p_3_pre: the 3 first letters in p-word
         :return: no return, the indexes_vector is updated
         """
         option_for_features_list = [p_word, p_pos, c_word, c_pos, p_pos_minus_1, p_pos_plus_1, c_pos_plus_1,
@@ -938,10 +948,12 @@ class ParserModel:
                                                      distance_p_c=p_c_distance, is_full_graph=is_full_graph)
         # build feature_32 of p-3-pre, c-3-pre
         self.calculate_local_feature_vec_per_feature(indexes_vector, '32', p_3_pre=p_3_pre, c_3_pre=c_3_pre,
-                                                     is_full_graph=is_full_graph)
+                                                     is_full_graph=is_full_graph, is_parent_before=parent_before,
+                                                     distance_p_c=p_c_distance)
         # build feature_33 of p-3-suf, c-3-suf
         self.calculate_local_feature_vec_per_feature(indexes_vector, '33', p_3_suf=p_3_suf, c_3_suf=c_3_suf,
-                                                     is_full_graph=is_full_graph)
+                                                     is_full_graph=is_full_graph, is_parent_before=parent_before,
+                                                     distance_p_c=p_c_distance)
 
         return indexes_vector
 
