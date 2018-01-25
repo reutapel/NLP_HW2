@@ -160,7 +160,12 @@ def main(train_file_to_use, test_file_to_use, comp_file_to_use, test_type, featu
         perceptron_obj = StructPerceptron(model=parser_model_obj, directory=directory,
                                           feature_combination=features_combination)
         weights = perceptron_obj.perceptron(num_of_iter=number_of_iter)
-
+        # weights = None
+        # old_loc = "C:\\Users\\RomG\\PycharmProjects\\NLP_HW2\\output\\stepwise_no_27_23_01_2018_14_06_52\\weights\\30_28_26_25_24_23_22_21_20_19_18_17_16_15_14_13_12_11_10_9_8_7_3_2_1"
+        # with open(os.path.join(old_loc, "final_weight_vec_20.pkl"), 'rb') as f:
+        #     weights = pickle.load(f)
+        # perceptron_obj.directory = old_loc
+        # perceptron_obj.inference_mode('test', weights)
         train_run_time = (time.time() - model_finish_time) / 60.0
         print('{}: Finish Perceptron for features : {} and num_of_iter: {}. run time: {} minutes'.
               format(time.asctime(time.localtime(time.time())), features_combination, number_of_iter, train_run_time))
@@ -242,30 +247,29 @@ if __name__ == "__main__":
                                                     'best_weights_final_weight_vec_80.pkl')
     best_weights_list = [best_weights_vec_loaded_basic, best_weights_vec_loaded_advanced]
 
-    advanced_features = range(32, 0, -1)
+    advanced_features = range(31, 0, -1)
     advanced_features = [str(i) for i in advanced_features]
-    advanced_features.remove('27')
-    advanced_features.remove('29')
-    advanced_features.remove('7')
-    advanced_features.remove('6')
-    advanced_features.remove('5')
-    advanced_features.remove('4')
-    advanced_features2 = copy(advanced_features)
-    advanced_features2.remove('32')
-    advanced_features2.remove('33')
     basic_features = range(1, 14)
     basic_features = [str(i) for i in basic_features]
     basic_features.remove('7')
     basic_features.remove('9')
     basic_features.remove('11')
     basic_features.remove('12')
+    advanced_features.remove('30')
+    advanced_features.remove('27')
+    advanced_features.remove('29')
+    advanced_features.remove('28')
+    advanced_features.remove('4')
+    advanced_features.remove('5')
+    advanced_features.remove('6')
+    advanced_features.remove('7')
     feature_type_dict = {
-        'all_features': [advanced_features],
-        'basic_model': [basic_features]}
+        'all_features': [advanced_features]}
+        # 'basic_model': [basic_features]}
 
-    num_of_iter_list = [10]
+    num_of_iter_list = [100]
     cv = False
-    stepwise = True
+    stepwise = False
     comp = False
     use_edges_existed_on_train, use_pos_edges_existed_on_train = True, True
     if cv:
